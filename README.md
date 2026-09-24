@@ -82,20 +82,33 @@ Outros comandos: `npm run admin:create -- email@dominio.com "Nome" owner` (cria 
 
 ### Opção A — um servidor (VPS) com Docker
 
-**Em um comando**, do seu computador (onde o alias SSH da VPS já funciona):
+**Em um comando**, do seu computador. Primeiro, um alias SSH para a VPS no `~/.ssh/config`
+(ou use o alias que você já tem para ela):
+
+```
+Host maby-chris
+  HostName <IP da VPS>
+  User root
+```
+
+> Use só letras, números, `.`, `-` ou `_` no alias: o OpenSSH 9.6+ recusa nomes com `&`
+> (ex.: `maby&chris`), mesmo quando estão no `~/.ssh/config`.
 
 ```bash
 git clone https://github.com/w4ll3ns/NOIVADO.git && cd NOIVADO
-git checkout claude/maby-chris-engagement-site-1ejh8s
-./scripts/deploy.sh 'maby&chris'                        # sem domínio → https://<ip>.sslip.io
-./scripts/deploy.sh 'maby&chris' noivado.seudominio.com # com domínio (DNS A apontando para a VPS)
+./scripts/deploy.sh maby-chris                        # sem domínio → https://<ip>.sslip.io
+./scripts/deploy.sh maby-chris noivado.seudominio.com # com domínio (DNS A apontando para a VPS)
 ```
 
 O script envia o código, instala o Docker se faltar, cria swap em VPS pequenas, gera o `.env`
 com segredos aleatórios, abre as portas 80/443 no `ufw`, sobe Postgres + app + Caddy (HTTPS) e
 imprime o endereço, o login do painel e três convites de exemplo (`SEED_DEMO=false` para não
-criá-los). Rodar de novo atualiza o site mantendo banco, fotos e `.env`. Se a VPS já tiver nginx/Apache
-nas portas 80/443, ele sobe sem o Caddy e mostra a configuração de proxy a usar.
+criá-los). Rodar de novo atualiza o site mantendo banco, fotos e `.env`.
+
+**VPS com outros sites:** se as portas 80/443 já estiverem com outro proxy (nginx/Apache no host ou
+o Caddy/Traefik de outro projeto em Docker), o script sobe sem o Caddy, deixa o app em
+`127.0.0.1:3100` (ou a próxima porta livre) e imprime o trecho pronto para esse proxy: o bloco do
+nginx + `certbot`, ou o `docker network connect` + bloco do Caddyfile quando o proxy é um container.
 
 **Manualmente:**
 
