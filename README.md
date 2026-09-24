@@ -82,8 +82,32 @@ Outros comandos: `npm run admin:create -- email@dominio.com "Nome" owner` (cria 
 
 ### Opção A — um servidor (VPS) com Docker
 
-**Em um comando**, do seu computador. Primeiro, um alias SSH para a VPS no `~/.ssh/config`
-(ou use o alias que você já tem para ela):
+**Direto na VPS** (logado por SSH, como root):
+
+```bash
+git clone https://github.com/w4ll3ns/NOIVADO.git /opt/noivado
+cd /opt/noivado && ./scripts/vps-setup.sh noivado.seudominio.com.br   # sem domínio → https://<ip>.sslip.io
+```
+
+Antes, crie no DNS um registro **A** do domínio apontando para o IP da VPS — o script confere isso
+antes de pedir o certificado HTTPS e avisa o que falta. Para atualizar depois:
+`cd /opt/noivado && git pull && ./scripts/vps-setup.sh` (mantém banco, fotos e `.env`).
+
+O script instala o Docker se faltar, cria swap em VPS pequenas, gera o `.env` com segredos
+aleatórios, sobe Postgres + app e imprime o endereço, o login do painel e três convites de exemplo
+(`SEED_DEMO=false` na frente do comando para não criá-los). Para o HTTPS, ele vê o que já ocupa as
+portas 80/443:
+
+- **nada** → sobe o Caddy deste projeto (HTTPS automático, abre 80/443 no `ufw`/`firewalld`);
+- **Traefik em Docker** (ex.: o de uma instalação do n8n) → lê a configuração dele (rede,
+  entrypoints e certresolver) e publica o site por labels (`docker-compose.traefik.yml`), sem mexer
+  nos outros serviços;
+- **outro proxy** (nginx/Apache no host, Caddy de outro projeto) → deixa o app em `127.0.0.1:3100`
+  (ou a próxima porta livre) e imprime o trecho pronto: bloco do nginx + `certbot`, ou
+  `docker network connect` + bloco do Caddyfile.
+
+**Do seu computador**, com um alias SSH que entra sem senha (chave SSH) — o `deploy.sh` envia o
+último commit e roda o mesmo `vps-setup.sh` lá:
 
 ```
 Host maby-chris
@@ -91,24 +115,12 @@ Host maby-chris
   User root
 ```
 
-> Use só letras, números, `.`, `-` ou `_` no alias: o OpenSSH 9.6+ recusa nomes com `&`
-> (ex.: `maby&chris`), mesmo quando estão no `~/.ssh/config`.
-
 ```bash
-git clone https://github.com/w4ll3ns/NOIVADO.git && cd NOIVADO
-./scripts/deploy.sh maby-chris                        # sem domínio → https://<ip>.sslip.io
-./scripts/deploy.sh maby-chris noivado.seudominio.com # com domínio (DNS A apontando para a VPS)
+./scripts/deploy.sh maby-chris noivado.seudominio.com.br
 ```
 
-O script envia o código, instala o Docker se faltar, cria swap em VPS pequenas, gera o `.env`
-com segredos aleatórios, abre as portas 80/443 no `ufw`, sobe Postgres + app + Caddy (HTTPS) e
-imprime o endereço, o login do painel e três convites de exemplo (`SEED_DEMO=false` para não
-criá-los). Rodar de novo atualiza o site mantendo banco, fotos e `.env`.
-
-**VPS com outros sites:** se as portas 80/443 já estiverem com outro proxy (nginx/Apache no host ou
-o Caddy/Traefik de outro projeto em Docker), o script sobe sem o Caddy, deixa o app em
-`127.0.0.1:3100` (ou a próxima porta livre) e imprime o trecho pronto para esse proxy: o bloco do
-nginx + `certbot`, ou o `docker network connect` + bloco do Caddyfile quando o proxy é um container.
+> Use só letras, números, `.`, `-` ou `_` no alias: o OpenSSH 9.6+ recusa nomes com `&`
+> (ex.: `maby&chris`), mesmo quando estão no `~/.ssh/config`.
 
 **Manualmente:**
 
@@ -164,7 +176,7 @@ persistente (ex.: Vercel), use `STORAGE_DRIVER=s3` com Cloudflare R2, S3 ou B2. 
 ```
 docs/PLANEJAMENTO.md        planejamento (15 itens)
 drizzle/                    migrações SQL
-scripts/                    migrate, seed, create-admin
+scripts/                    migrate, seed, create-admin, deploy (vps-setup.sh / deploy.sh)
 src/app/(site)/             site público, portal (/i), presentes, galeria, mensagens
 src/app/a/[token]/          álbum colaborativo (QR)
 src/app/admin/              painel

@@ -14,3 +14,4 @@ npm-debug.log*
 .DS_Store
 test-results/
 playwright-report/
+/.env.primeiro-acesso

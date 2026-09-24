@@ -1,0 +1,27 @@
+# Use quando a VPS já tem um Traefik em Docker nas portas 80/443 (ex.: o do n8n).
+# O app entra na rede do Traefik e é publicado por labels, com o HTTPS do próprio Traefik.
+# O scripts/vps-setup.sh detecta e preenche estas variáveis no .env automaticamente:
+#   docker compose -f docker-compose.yml -f docker-compose.traefik.yml up -d --build db setup app
+services:
+  app:
+    labels:
+      traefik.enable: 'true'
+      traefik.docker.network: ${TRAEFIK_NETWORK:?defina TRAEFIK_NETWORK no .env}
+      traefik.http.routers.noivado.rule: 'Host(`${DOMAIN}`)'
+      traefik.http.routers.noivado.entrypoints: ${TRAEFIK_ENTRYPOINT:-websecure}
+      traefik.http.routers.noivado.tls.certresolver: ${TRAEFIK_CERTRESOLVER:-le}
+      traefik.http.services.noivado.loadbalancer.server.port: '3000'
+      # http:// → https://
+      traefik.http.routers.noivado-http.rule: 'Host(`${DOMAIN}`)'
+      traefik.http.routers.noivado-http.entrypoints: ${TRAEFIK_HTTP_ENTRYPOINT:-web}
+      traefik.http.routers.noivado-http.middlewares: noivado-https
+      traefik.http.middlewares.noivado-https.redirectscheme.scheme: https
+      traefik.http.middlewares.noivado-https.redirectscheme.permanent: 'true'
+    networks:
+      - default
+      - traefik
+
+networks:
+  traefik:
+    external: true
+    name: ${TRAEFIK_NETWORK:?defina TRAEFIK_NETWORK no .env}
