@@ -2032,3 +2032,7 @@ a.gift:hover .gift__cta {
     display: inline;
   }
 }
+.album-page > .frame-corners {
+  position: fixed;
+  inset: 10px;
+}
