@@ -12,8 +12,9 @@ Histórico de São Luís, 31 · 10 · 2026).
 ## O que tem aqui
 
 **Site público**
-- Abertura com a fachada da Casa de Zaquia em gravura: a porta dupla abre em 3D, a luz do interior
-  surge, a "câmera" se aproxima e entra no casarão. Pode ser pulada e não se repete no mesmo aparelho.
+- Abertura com o casarão do Save the Date: o desenho se faz a traço (a tinta nasce no portão e corre
+  pelas linhas, dourada, secando em sépia), as janelas acendem uma a uma e, no "Entrar", a luz do
+  portão cresce e a "câmera" entra por ele. Pode ser pulada e não se repete no mesmo aparelho.
 - Home com contador ("Faltam XX dias…"), Nossa História (texto + linha do tempo + fotos oficiais),
   O noivado (data, horários, programação, orientações e o próprio Save the Date), Localização
   (Google Maps / Waze), Dress Code (paleta sugerida e cores reservadas), Presentes, Dúvidas.
@@ -181,7 +182,7 @@ src/app/(site)/             site público, portal (/i), presentes, galeria, mens
 src/app/a/[token]/          álbum colaborativo (QR)
 src/app/admin/              painel
 src/app/api/                beacon de acesso, upload, webhook MP, exportações, QR, ZIP
-src/components/casarao/     fachada da Casa de Zaquia (SVG)
+src/components/casarao/     o casarão (desenho original + luzes nas janelas)
 src/components/intro/       abertura com a porta
 src/components/ornaments/   divisores, molduras, brasão, ícones em gravura
 src/lib/                    regras de negócio (convites, RSVP, presentes, pagamentos, álbum…)
@@ -193,6 +194,9 @@ tests/                      testes (vitest)
 
 - `public/brand/save-the-date.jpg` é o Save the Date original — usado na seção do evento e como imagem
   de prévia quando o link é compartilhado.
-- A fachada está em `src/components/casarao/Facade.tsx` (SVG desenhado em código, fiel ao estilo do
-  Save the Date). Se o ilustrador enviar uma versão vetorial da Casa de Zaquia, ela pode substituir esse
-  componente mantendo o recorte da porta (`DOOR`) para a animação.
+- O casarão é o desenho original do Save the Date (`art/casarao-original.webp`). O script
+  `python3 scripts/art/casarao.py` (numpy, scipy, scikit-image, pillow) gera a partir dele tudo o que o
+  site usa: o traço com fundo transparente em AVIF/WebP (`public/brand/casarao*`), o mapa de tempo da
+  animação de desenho (`casarao-tempo.webp`) e os recortes das janelas e do portão para as luzes
+  (`src/components/casarao/casarao-data.ts`). Para trocar a arte, substitua o original, ajuste as
+  janelas em `REGIONS` no script se o desenho mudar e rode o script de novo.

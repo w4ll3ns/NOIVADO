@@ -497,10 +497,6 @@
   width: min(420px, 86vw);
   margin: 26px auto 8px;
 }
-.hero__facade .cz {
-  width: 100%;
-  height: auto;
-}
 .countdown {
   margin: 12px auto 26px;
   font-style: italic;
@@ -1575,9 +1571,8 @@ a.gift:hover .gift__cta {
   max-width: 440px;
   position: relative;
 }
-.album-page .cz {
+.album-page__casarao {
   width: min(300px, 78vw);
-  height: auto;
   margin: 8px auto 4px;
 }
 .album-title {
@@ -1874,9 +1869,8 @@ a.gift:hover .gift__cta {
   padding: clamp(56px, 11vw, 96px) 0 max(36px, env(safe-area-inset-bottom));
   border-top: 1px solid var(--line-soft);
 }
-.site-footer .cz {
+.site-footer__casarao {
   width: min(260px, 64vw);
-  height: auto;
   margin: 0 auto 18px;
 }
 .site-footer__names {

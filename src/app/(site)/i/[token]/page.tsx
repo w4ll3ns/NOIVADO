@@ -16,7 +16,7 @@ import {
 import { getAlbumEntryToken, getMainAlbum } from '@/lib/content'
 import { albumUploadState } from '@/lib/album-state'
 import { endOfDayInTz, formatBRL, formatDate, formatDateDots, formatDateLong, formatTime, fullName, weekdayOf } from '@/lib/format'
-import { googleMapsUrl, monogramFor, wazeUrl } from '@/lib/event'
+import { googleMapsUrl, wazeUrl } from '@/lib/event'
 import { InvalidInvite } from './InvalidInvite'
 
 export const metadata: Metadata = {
@@ -63,7 +63,7 @@ export default async function PortalPage(props: PageProps<'/i/[token]'>) {
       {settings.intro.enabled && !preview ? (
         <IntroGate
           coupleNames={e.coupleNames}
-          monogram={monogramFor(e.coupleNames)}
+          venueName={e.venueName}
           dateDots={formatDateDots(e.date)}
           phrase={settings.intro.phrase}
           buttonLabel={settings.intro.buttonLabel}

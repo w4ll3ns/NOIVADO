@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { headers } from 'next/headers'
-import { Facade } from '@/components/casarao/Facade'
+import { Casarao } from '@/components/casarao/Casarao'
 import { Divider, FrameCorners } from '@/components/ornaments/Ornaments'
 import { CoupleNames } from '@/components/site/CoupleNames'
 import { AlbumCapture } from '@/components/album/AlbumCapture'
@@ -10,7 +10,6 @@ import { albumUploadState } from '@/lib/album-state'
 import { getSettings } from '@/lib/settings'
 import { getCurrentGuest } from '@/lib/invitations'
 import { isBotUserAgent } from '@/lib/request'
-import { monogramFor } from '@/lib/event'
 import { formatDateDots } from '@/lib/format'
 
 export const metadata: Metadata = {
@@ -55,7 +54,7 @@ export default async function AlbumPage(props: PageProps<'/a/[token]'>) {
         <p className="caps" style={{ fontSize: '0.8rem' }}>
           <CoupleNames names={e.coupleNames} /> · {formatDateDots(e.date)}
         </p>
-        <Facade idPrefix="album" className="cz--small" monogram={monogramFor(e.coupleNames)} />
+        <Casarao forte luzes="acesas" className="album-page__casarao" sizes="300px" />
         <Divider />
 
         {state === 'open' ? (

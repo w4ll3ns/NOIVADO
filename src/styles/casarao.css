@@ -1,137 +1,78 @@
-/* Fachada da Casa de Zaquia — traço de gravura */
-.cz {
-  --cz-stroke: 1;
-  --cz-ink: var(--sepia);
+/* =========================================================
+   Casarão — o desenho original, com luz quente nas janelas
+   ========================================================= */
+.casarao {
+  --luz-centro: #fff5da;
+  --luz-meio: #f5cf86;
+  --luz-borda: #df9f4c;
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1143 / 1153;
+}
+.casarao picture {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.casarao__traco {
+  position: relative;
+  z-index: 1;
+  display: block;
+  width: 100%;
+  height: 100%;
+  user-select: none;
+  -webkit-user-drag: none;
+  pointer-events: none;
+}
+
+.casarao__luzes {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  width: 100%;
+  height: 100%;
   overflow: visible;
+  pointer-events: none;
 }
-
-.cz-l1,
-.cz-l2,
-.cz-l3 {
-  fill: none;
-  stroke: var(--cz-ink);
-  stroke-linecap: round;
-  stroke-linejoin: round;
+.casarao__luz {
+  opacity: 0;
 }
-.cz-l1 {
-  stroke-width: calc(1.35px * var(--cz-stroke));
-}
-.cz-l2 {
-  stroke-width: calc(0.9px * var(--cz-stroke));
-}
-.cz-l3 {
-  stroke-width: calc(0.55px * var(--cz-stroke));
-}
-
-.cz .cz-wall {
-  fill: #f2e3d6;
-}
-.cz .cz-fill-stone {
-  fill: #f9f1ea;
-}
-.cz .cz-fill-ivory {
-  fill: #fcf7f2;
-}
-.cz .cz-fill-plinth {
-  fill: #eadbcc;
-}
-.cz .cz-glass {
-  fill: #e5d3c1;
-}
-.cz .cz-fill-wood {
-  fill: #e4ceb6;
-}
-.cz .cz-fill-wood-light {
-  fill: #ecdbc7;
-}
-.cz .cz-fill-iron {
-  fill: #9a8471;
-}
-.cz .cz-lamp-glass {
-  fill: #f4e4c8;
-}
-
-.cz-hatch-line {
-  stroke: var(--cz-ink);
-  stroke-width: 0.55;
-  opacity: 0.55;
-}
-
-.cz-tile-grid {
-  fill: none;
-  stroke: var(--taupe);
-  stroke-width: 0.35;
-}
-.cz-tile {
-  fill: none;
-  stroke: var(--taupe);
-  stroke-width: 0.5;
-}
-.cz-azulejo {
+.casarao__halo {
   opacity: 0.42;
 }
-
-.cz-iron {
-  stroke: var(--cz-ink);
-  stroke-width: 0.75;
-}
-.cz-iron-ring {
-  fill: none;
-  stroke: var(--cz-ink);
-  stroke-width: 0.55;
-}
-
-.cz-monogram {
-  font-family: var(--font-script);
-  font-size: 30px;
-  fill: var(--cz-ink);
-}
-
-.cz-interior-lines {
-  fill: none;
-  stroke: #b08a5e;
-  stroke-width: 0.7;
-  opacity: 0.6;
-}
-
-.cz-door-frame {
-  fill: none;
-  stroke: var(--cz-ink);
-  stroke-width: 1.3;
-}
-
-.cz-lamp-glow {
-  opacity: 0.4;
-  transition: opacity 1.4s var(--ease);
-}
-.cz-fanlight-glow {
-  opacity: 0;
-  transition: opacity 1.4s var(--ease) 0.2s;
-}
-.cz-spill {
-  opacity: 0;
-  transition: opacity 1.4s var(--ease) 0.35s;
-}
-
-.is-opening .cz-lamp-glow {
-  opacity: 1;
-}
-.is-opening .cz-fanlight-glow {
-  opacity: 0.9;
-}
-.is-opening .cz-spill {
+.casarao--acesas .casarao__luz {
   opacity: 1;
 }
 
-/* Versões pequenas (rodapé, cartões): traço mais encorpado para não sumir. */
-.cz--small {
-  --cz-stroke: 1.8;
+/* Acendem uma a uma, do portão para fora, com o tremor de um lampião sendo aceso. */
+.casarao--acender .casarao__luz {
+  animation: casarao-acende 1.2s var(--ease) both;
+  animation-delay: calc(0.5s + var(--i) * 0.15s);
 }
-.cz--small .cz-azulejo {
-  display: none;
+@keyframes casarao-acende {
+  0% {
+    opacity: 0;
+  }
+  35% {
+    opacity: 0.75;
+  }
+  50% {
+    opacity: 0.45;
+  }
+  100% {
+    opacity: 1;
+  }
 }
 
-.cz .cz-shade {
-  fill: var(--cz-ink);
-  opacity: 0.07;
+@media (prefers-reduced-motion: reduce) {
+  .casarao--acender .casarao__luz {
+    animation: none;
+    opacity: 1;
+  }
+}
+
+@media print {
+  .casarao__luzes {
+    display: none;
+  }
 }

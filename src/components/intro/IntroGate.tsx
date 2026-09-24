@@ -1,22 +1,10 @@
 import { headers } from 'next/headers'
-import { DoorIntro } from './DoorIntro'
+import { CasaraoIntro } from './CasaraoIntro'
 import { INTRO_STORAGE_KEY } from './constants'
-import { DOOR, DoorLeafArt, FACADE_H, FACADE_W, Facade } from '@/components/casarao/Facade'
+import { Casarao, CASARAO_PORTA } from '@/components/casarao/Casarao'
 import { CoupleNames } from '@/components/site/CoupleNames'
 
-function Leaf({ side }: { side: 'left' | 'right' }) {
-  const id = `intro-leaf-${side}-hatch`
-  return (
-    <svg viewBox={`0 0 ${DOOR.w / 2} ${DOOR.h}`} preserveAspectRatio="none" className="cz" aria-hidden="true" focusable="false">
-      <defs>
-        <pattern id={id} width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
-          <line x1="0" y1="0" x2="0" y2="5" className="cz-hatch-line" />
-        </pattern>
-      </defs>
-      <DoorLeafArt side={side} hatch={`url(#${id})`} />
-    </svg>
-  )
-}
+const TEMPO_SRC = '/brand/casarao-tempo.webp'
 
 type Props = {
   coupleNames: string
@@ -26,22 +14,26 @@ type Props = {
   welcomeTitle: string
   welcomeSub?: string
   force?: boolean
-  monogram?: string
+  venueName?: string
 }
 
 /**
  * Abertura com o casarão. Renderizada no servidor (pinta imediatamente, sem esperar JS);
- * um script inline esconde a abertura antes da primeira pintura se este dispositivo já a viu.
+ * um script inline esconde a abertura antes da primeira pintura se este dispositivo já a viu —
+ * e, se ainda não viu, já começa a baixar o mapa de tempo da animação de desenho.
  */
 export async function IntroGate(props: Props) {
   const nonce = (await headers()).get('x-nonce') ?? undefined
+  const prefetch = `new Image().src='${TEMPO_SRC}'`
   const script = props.force
-    ? `document.documentElement.classList.remove('intro-seen')`
-    : `try{if(localStorage.getItem('${INTRO_STORAGE_KEY}'))document.documentElement.classList.add('intro-seen')}catch(e){}`
+    ? `document.documentElement.classList.remove('intro-seen');${prefetch}`
+    : `try{if(localStorage.getItem('${INTRO_STORAGE_KEY}'))document.documentElement.classList.add('intro-seen');else ${prefetch}}catch(e){}`
   return (
     <>
       <script nonce={nonce} dangerouslySetInnerHTML={{ __html: script }} />
-      <DoorIntro
+      {/* Sem JavaScript não há como "entrar": vai direto ao site. */}
+      <noscript dangerouslySetInnerHTML={{ __html: '<style>.intro{display:none!important}body{overflow:auto!important}</style>' }} />
+      <CasaraoIntro
         names={<CoupleNames names={props.coupleNames} />}
         dateDots={props.dateDots}
         phrase={props.phrase}
@@ -49,15 +41,16 @@ export async function IntroGate(props: Props) {
         welcomeTitle={props.welcomeTitle}
         welcomeSub={props.welcomeSub}
         force={props.force}
-        facade={<Facade idPrefix="intro" withDoor={false} monogram={props.monogram} />}
-        leftLeaf={<Leaf side="left" />}
-        rightLeaf={<Leaf side="right" />}
-        door={{
-          left: (DOOR.x / FACADE_W) * 100,
-          top: (DOOR.y / FACADE_H) * 100,
-          width: (DOOR.w / FACADE_W) * 100,
-          height: (DOOR.h / FACADE_H) * 100,
-        }}
+        casarao={
+          <Casarao
+            luzes="acesas"
+            priority
+            sizes="(max-width: 640px) 94vw, 58vh"
+            alt={props.venueName ? `Fachada da ${props.venueName}` : ''}
+          />
+        }
+        porta={CASARAO_PORTA}
+        tempoSrc={TEMPO_SRC}
       />
     </>
   )

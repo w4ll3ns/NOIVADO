@@ -1,10 +1,9 @@
 import Link from 'next/link'
-import { Facade } from '@/components/casarao/Facade'
+import { Casarao } from '@/components/casarao/Casarao'
 import { Crest, Divider, FrameCorners } from '@/components/ornaments/Ornaments'
 import { CoupleNames } from '@/components/site/CoupleNames'
 import type { Settings } from '@/lib/settings-schema'
 import { daysUntil, formatDateLong } from '@/lib/format'
-import { monogramFor } from '@/lib/event'
 
 export function Countdown({ settings }: { settings: Settings }) {
   const days = daysUntil(settings.event.date)
@@ -38,7 +37,7 @@ export function Hero({ settings, greeting, rsvpHref }: { settings: Settings; gre
           </span>
         </h1>
         <div className="hero__facade">
-          <Facade idPrefix="hero" className="cz--small" monogram={monogramFor(e.coupleNames)} title={`Fachada da ${e.venueName}`} />
+          <Casarao luzes="acender" priority alt={`Fachada da ${e.venueName}`} sizes="(max-width: 640px) 86vw, 420px" />
         </div>
         <Divider />
         <p className="hero__date">{formatDateLong(e.date)}</p>

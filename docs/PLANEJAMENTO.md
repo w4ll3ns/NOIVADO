@@ -21,7 +21,7 @@ convite — muito respiro, traço fino, ornamentos pontuais e nenhuma "cara de a
 | Componentes do site | `src/styles/site.css` | botões, molduras, seções, formulários, portal, presentes, álbum |
 | Admin | `src/styles/admin.css` | layout funcional com a mesma paleta e títulos serifados |
 | Ornamentos | `src/components/ornaments/*` | SVGs: divisores, cantos de moldura, brasão, ícones em gravura |
-| Casarão | `src/components/casarao/*` | fachada da Casa de Zaquia em SVG + porta animável |
+| Casarão | `src/components/casarao/*` | o desenho original do Save the Date + luzes nas janelas |
 
 Regras:
 
@@ -81,8 +81,8 @@ O admin usa Cormorant nos títulos e a pilha de sistema (`system-ui`) nas tabela
 
 | Componente | Descrição |
 | --- | --- |
-| `Casarao` | fachada frontal da Casa de Zaquia em gravura; porta dupla em grupo separado para animar |
-| `DoorIntro` | tela de abertura: casarão, nomes, data, frase, ENTRAR, "pular"; memória por dispositivo |
+| `Casarao` | o casarão do Save the Date (traço sépia transparente) com luz quente opcional nas janelas e no portão |
+| `CasaraoIntro` | abertura: o casarão se desenha, as janelas acendem, ENTRAR leva a câmera pelo portão; "pular"; memória por dispositivo |
 | `Divider` | filete com arabesco central (o mesmo `—∽•❦•∽—` do Save the Date) |
 | `FrameCorners` | quatro cantos barrocos em SVG que emolduram blocos importantes |
 | `Crest` | ornamento superior (urna com folhagem), usado no topo de páginas |

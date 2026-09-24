@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { eq } from 'drizzle-orm'
-import { Facade } from '@/components/casarao/Facade'
+import { Casarao } from '@/components/casarao/Casarao'
 import { Divider } from '@/components/ornaments/Ornaments'
 import { CoupleNames } from '@/components/site/CoupleNames'
 import { requireAdmin } from '@/lib/auth/session'
@@ -10,7 +10,6 @@ import { env } from '@/lib/env'
 import { getSettings } from '@/lib/settings'
 import { qrSvg } from '@/lib/qr'
 import { formatDateDots } from '@/lib/format'
-import { monogramFor } from '@/lib/event'
 import { PrintButton } from './PrintButton'
 
 export const metadata: Metadata = { title: 'Imprimir QR Code' }
@@ -35,7 +34,7 @@ export default async function PrintQrPage(props: PageProps<'/admin/album/imprimi
       <p className="qr-card__meta">
         <CoupleNames names={e.coupleNames} /> · {formatDateDots(e.date)}
       </p>
-      <Facade idPrefix={`print${i}`} className="cz--small qr-card__facade" monogram={monogramFor(e.coupleNames)} />
+      <Casarao forte priority className="qr-card__facade" sizes="170px" />
       <p className="qr-card__lead">Registre esse momento conosco.</p>
       <p className="qr-card__sub">Queremos ver o nosso noivado pelos seus olhos.</p>
       <div className="qr-card__qr" dangerouslySetInnerHTML={{ __html: svg }} />

@@ -1,1 +1,1 @@
-export const INTRO_STORAGE_KEY = 'mc-intro-v1'
+export const INTRO_STORAGE_KEY = 'mc-intro-v2'

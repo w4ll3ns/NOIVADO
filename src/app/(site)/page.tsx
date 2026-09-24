@@ -6,7 +6,6 @@ import { getSettings } from '@/lib/settings'
 import { getCurrentGuest } from '@/lib/invitations'
 import { countApprovedPhotos, getCouplePhotos, getFaqs, getMainAlbum, getSchedule, getStory } from '@/lib/content'
 import { formatDateDots } from '@/lib/format'
-import { monogramFor } from '@/lib/event'
 
 export default async function HomePage(props: PageProps<'/'>) {
   const sp = await props.searchParams
@@ -28,7 +27,7 @@ export default async function HomePage(props: PageProps<'/'>) {
       {settings.intro.enabled ? (
         <IntroGate
           coupleNames={e.coupleNames}
-          monogram={monogramFor(e.coupleNames)}
+          venueName={e.venueName}
           dateDots={formatDateDots(e.date)}
           phrase={settings.intro.phrase}
           buttonLabel={settings.intro.buttonLabel}

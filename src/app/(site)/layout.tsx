@@ -37,7 +37,6 @@ export default async function SiteLayout({ children }: { children: React.ReactNo
       <SiteFooter
         coupleNames={settings.event.coupleNames}
         dateDots={formatDateDots(settings.event.date)}
-        monogram={monogram}
         showGuestbook={settings.guestbook.enabled}
       />
     </>
