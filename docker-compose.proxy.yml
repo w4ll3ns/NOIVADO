@@ -1,0 +1,7 @@
+# Use quando a VPS já tem um proxy reverso (nginx, Traefik, Caddy próprio) nas portas 80/443.
+# A aplicação fica só em 127.0.0.1:${APP_HOST_PORT:-3100}; aponte o seu proxy para lá.
+#   docker compose -f docker-compose.yml -f docker-compose.proxy.yml up -d --build db setup app
+services:
+  app:
+    ports:
+      - '127.0.0.1:${APP_HOST_PORT:-3100}:3000'

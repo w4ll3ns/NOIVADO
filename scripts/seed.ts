@@ -34,7 +34,7 @@ async function isEmpty(table: PgTable) {
 }
 
 async function main() {
-  const demo = process.argv.includes('--demo')
+  const demo = process.argv.includes('--demo') || process.env.SEED_DEMO === 'true'
 
   if (await isEmpty(schema.giftCategories)) {
     const cats = await db
@@ -124,7 +124,7 @@ async function main() {
       const token = randomToken(12)
       await db.insert(schema.invitationTokens).values({ invitationId: row.id, token })
       await db.insert(schema.invitationEvents).values({ invitationId: row.id, type: 'created', actor: 'system' })
-      console.log(`✓ convite demo "${inv.label}": /i/${token}`)
+      console.log(`✓ convite demo "${inv.label}": ${(process.env.APP_URL ?? "").replace(/\/+$/, "")}/i/${token}`)
     }
   }
 

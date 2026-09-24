@@ -82,6 +82,23 @@ Outros comandos: `npm run admin:create -- email@dominio.com "Nome" owner` (cria 
 
 ### Opção A — um servidor (VPS) com Docker
 
+**Em um comando**, do seu computador (onde o alias SSH da VPS já funciona):
+
+```bash
+git clone https://github.com/w4ll3ns/NOIVADO.git && cd NOIVADO
+git checkout claude/maby-chris-engagement-site-1ejh8s
+./scripts/deploy.sh 'maby&chris'                        # sem domínio → https://<ip>.sslip.io
+./scripts/deploy.sh 'maby&chris' noivado.seudominio.com # com domínio (DNS A apontando para a VPS)
+```
+
+O script envia o código, instala o Docker se faltar, cria swap em VPS pequenas, gera o `.env`
+com segredos aleatórios, abre as portas 80/443 no `ufw`, sobe Postgres + app + Caddy (HTTPS) e
+imprime o endereço, o login do painel e três convites de exemplo (`SEED_DEMO=false` para não
+criá-los). Rodar de novo atualiza o site mantendo banco, fotos e `.env`. Se a VPS já tiver nginx/Apache
+nas portas 80/443, ele sobe sem o Caddy e mostra a configuração de proxy a usar.
+
+**Manualmente:**
+
 ```bash
 cp .env.example .env    # APP_URL=https://seu-dominio, APP_SECRET, MP_*, ADMIN_*, DOMAIN, POSTGRES_PASSWORD
 docker compose up -d --build
