@@ -51,29 +51,6 @@ export async function saveSettingsAction(key: SettingsKey, _prev: SettingsState,
   return { ok: true }
 }
 
-export async function saveMilestoneAction(form: FormData) {
-  const admin = await requireAdmin('editor')
-  const id = String(form.get('id') ?? '')
-  const title = cleanLine(form.get('title'), 160)
-  if (!title) return
-  const mediaId = String(form.get('mediaId') ?? '')
-  const values = {
-    title,
-    dateLabel: cleanLine(form.get('dateLabel'), 60) || null,
-    text: cleanText(form.get('text'), 1200) || null,
-    mediaId: /^[0-9a-f-]{36}$/.test(mediaId) ? mediaId : null,
-    sortOrder: Number(form.get('sortOrder') ?? 0) || 0,
-    isActive: form.get('isActive') === 'on',
-    updatedAt: new Date(),
-  }
-  if (form.get('op') === 'delete' && /^[0-9a-f-]{36}$/.test(id)) await db.delete(schema.storyMilestones).where(eq(schema.storyMilestones.id, id))
-  else if (/^[0-9a-f-]{36}$/.test(id)) await db.update(schema.storyMilestones).set(values).where(eq(schema.storyMilestones.id, id))
-  else await db.insert(schema.storyMilestones).values(values)
-  await audit(admin.id, 'story.save', 'story_milestone', id || null)
-  revalidatePath('/admin/configuracoes/historia')
-  revalidatePath('/')
-}
-
 export async function saveScheduleAction(form: FormData) {
   const admin = await requireAdmin('editor')
   const id = String(form.get('id') ?? '')

@@ -1,5 +1,4 @@
-import Image from 'next/image'
-import { CompassRose, FrameCorners } from '@/components/ornaments/Ornaments'
+import { CompassRose } from '@/components/ornaments/Ornaments'
 import { EngravedIcon } from '@/components/ornaments/EngravedIcon'
 import { SectionHead } from '@/components/site/SectionHead'
 import type { Settings } from '@/lib/settings-schema'
@@ -9,7 +8,7 @@ import { mediaUrl } from '@/lib/media'
 
 type ScheduleItem = { id: string; timeLabel: string; title: string; description: string | null }
 
-export function EventDetails({ settings, schedule, showCard = true }: { settings: Settings; schedule: ScheduleItem[]; showCard?: boolean }) {
+export function EventDetails({ settings, schedule }: { settings: Settings; schedule: ScheduleItem[] }) {
   const e = settings.event
   const guidance = [
     { title: 'Estacionamento', text: e.parking },
@@ -70,21 +69,6 @@ export function EventDetails({ settings, schedule, showCard = true }: { settings
           </div>
         ) : null}
 
-        {showCard ? (
-          <figure className="std-card">
-            <div className="std-card__frame">
-              <FrameCorners />
-              <Image
-                src="/brand/save-the-date.jpg"
-                alt={`Save the Date — ${e.title} de ${e.coupleNames}, ${formatDateLong(e.date)}, ${e.venueName}`}
-                width={882}
-                height={1280}
-                sizes="(min-width: 760px) 360px, 78vw"
-              />
-            </div>
-            <figcaption>O nosso Save the Date</figcaption>
-          </figure>
-        ) : null}
       </div>
     </section>
   )

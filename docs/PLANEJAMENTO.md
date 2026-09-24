@@ -59,13 +59,13 @@ Contraste verificado: `--sepia` sobre `--paper` = 4,6:1 (AA para texto normal);
 
 ## 3. Tipografia
 
-Três famílias, todas OFL, servidas localmente por `next/font/local` (sem requisição externa):
+As mesmas duas famílias do Save the Date, ambas OFL, servidas localmente por `next/font/local`
+(sem requisição externa):
 
 | Papel | Fonte | Onde |
 | --- | --- | --- |
-| Títulos clássicos | **Cormorant Garamond** 400/500/600 (+ itálico) | "NOIVADO", títulos de seção em caixa-alta com `letter-spacing: .28em` |
-| Texto | **EB Garamond** 400/500 (+ itálico) | parágrafos, formulários, portal — legível em 17–19 px no celular |
-| Caligrafia | **Pinyon Script** 400 | "Maby & Chris", saudações ("Olá, João e Maria") |
+| Títulos e texto | **EB Garamond** variável 400–800 (+ itálico) | "NOIVADO" e títulos em caixa-alta com `letter-spacing: .28em`; parágrafos, formulários, portal |
+| Caligrafia | **MonteCarlo** 400 | "Maby & Chris", saudações ("Olá, João e Maria") |
 
 Escala fluida (`clamp`), mobile first:
 
@@ -75,7 +75,7 @@ Escala fluida (`clamp`), mobile first:
 - `--fs-body` 1.125 rem (18 px), `line-height: 1.65`
 - `--fs-small` 0.95 rem
 
-O admin usa Cormorant nos títulos e a pilha de sistema (`system-ui`) nas tabelas, por densidade.
+O admin usa EB Garamond nos títulos e a pilha de sistema (`system-ui`) nas tabelas, por densidade.
 
 ## 4. Componentes principais
 
@@ -83,9 +83,10 @@ O admin usa Cormorant nos títulos e a pilha de sistema (`system-ui`) nas tabela
 | --- | --- |
 | `Casarao` | o casarão do Save the Date (traço sépia transparente) com luz quente opcional nas janelas e no portão |
 | `CasaraoIntro` | abertura: o casarão se desenha, as janelas acendem, ENTRAR leva a câmera pelo portão; "pular"; memória por dispositivo |
-| `Divider` | filete com arabesco central (o mesmo `—∽•❦•∽—` do Save the Date) |
-| `FrameCorners` | quatro cantos barrocos em SVG que emolduram blocos importantes |
-| `Crest` | ornamento superior (urna com folhagem), usado no topo de páginas |
+| `Divider` / `Rule` | os filetes do Save the Date (arabesco e losango), recortados da arte |
+| `FrameCorners` | o canto de voluta do Save the Date, espelhado nos quatro cantos de cartões |
+| `Crest` | o topo do dossel do Save the Date (urna com folhagem), no alto de páginas |
+| `SaveTheDateFrame` | a moldura inteira do Save the Date (topo da página inicial, com os textos por cima) |
 | `Button` | primário (sépia sólido, filete interno), secundário (contorno), texto (sublinhado fino) |
 | `SectionTitle` | sobretítulo em caixa-alta + título serifado + divisor |
 | `PaperCard` | superfície marfim com filete duplo — substitui "cards" genéricos |

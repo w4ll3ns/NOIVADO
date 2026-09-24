@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { Crest } from '@/components/ornaments/Ornaments'
+import { Monogram } from './CoupleNames'
 
 export type NavLink = { href: string; label: string }
 
@@ -42,7 +43,7 @@ export function SiteHeader({ links, ctaHref, ctaLabel, ctaShort, monogram, porta
     <header className="site-header">
       <div className="container site-header__inner">
         <Link href="/" className="monogram" aria-label="Início">
-          {monogram}
+          <Monogram text={monogram} />
         </Link>
         <nav className="site-nav" aria-label="Principal">
           {allLinks.map((l) => (
@@ -74,7 +75,9 @@ export function SiteHeader({ links, ctaHref, ctaLabel, ctaShort, monogram, porta
       {open ? (
         <div id="menu-sheet" className="menu-sheet" role="dialog" aria-modal="true" aria-label="Menu">
           <div className="menu-sheet__top">
-            <span className="monogram">{monogram}</span>
+            <span className="monogram">
+              <Monogram text={monogram} />
+            </span>
             <button type="button" className="menu-toggle" onClick={() => setOpen(false)}>
               Fechar <span aria-hidden="true">×</span>
             </button>

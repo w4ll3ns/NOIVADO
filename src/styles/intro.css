@@ -34,7 +34,7 @@ html:not(.intro-seen) body:has(.intro) {
   border: 0;
   background: none;
   font-family: var(--font-title);
-  font-weight: 600;
+  font-weight: 500;
   font-size: 0.74rem;
   letter-spacing: 0.2em;
   text-transform: uppercase;
@@ -58,12 +58,11 @@ html:not(.intro-seen) body:has(.intro) {
   line-height: 1.1;
 }
 .amp {
-  font-size: 0.72em;
   padding: 0 0.04em;
 }
 .intro__date {
   font-family: var(--font-title);
-  font-weight: 600;
+  font-weight: 500;
   font-size: clamp(0.9rem, 3.2vw, 1.1rem);
   letter-spacing: 0.34em;
   padding-left: 0.34em;

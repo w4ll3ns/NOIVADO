@@ -23,8 +23,8 @@ export const CASARAO_PORTA = {
 type Props = {
   /** Traço reforçado, para tamanhos pequenos (rodapé, cartões de QR). */
   forte?: boolean
-  /** Luz nas janelas: 'acesas' (fixas), 'acender' (acendem uma a uma ao carregar) ou 'apagadas'. */
-  luzes?: 'acesas' | 'acender' | 'apagadas'
+  /** Luz nas janelas e no portão (a abertura acende; no resto do site o casarão fica apagado). */
+  luzes?: 'acesas' | 'apagadas'
   /** Tamanho exibido, para o navegador escolher o arquivo (atributo sizes). */
   sizes?: string
   /** Texto alternativo; vazio quando o desenho é decorativo. */

@@ -55,7 +55,7 @@ Histórico de São Luís, 31 · 10 · 2026).
 
 Next.js 16 (App Router) · React 19 · TypeScript · PostgreSQL + Drizzle ORM · sharp · Mercado Pago
 REST API · pdf-lib · qrcode · exceljs · fflate. Sem frameworks de UI: o design system é CSS próprio
-(`src/styles`), com fontes locais OFL (Cormorant Garamond, EB Garamond e Pinyon Script).
+(`src/styles`), com as fontes do Save the Date servidas localmente (EB Garamond e MonteCarlo, OFL).
 
 ## Rodando localmente
 
@@ -192,8 +192,11 @@ tests/                      testes (vitest)
 
 ## Personalizando a arte
 
-- `public/brand/save-the-date.jpg` é o Save the Date original — usado na seção do evento e como imagem
-  de prévia quando o link é compartilhado.
+- `public/brand/save-the-date.jpg` é o Save the Date original — usado como imagem de prévia quando o
+  link é compartilhado e como fonte da moldura: `python3 scripts/art/moldura.py` recorta dele a moldura
+  inteira (topo da página inicial), os filetes, o canto de voluta dos cartões e a urna do brasão
+  (`public/brand/moldura*`, `filete-*`, `canto*`, `coroa*`).
+- Fontes: as mesmas do Save the Date — MonteCarlo (caligrafia) e EB Garamond (títulos e textos).
 - O casarão é o desenho original do Save the Date (`art/casarao-original.webp`). O script
   `python3 scripts/art/casarao.py` (numpy, scipy, scikit-image, pillow) gera a partir dele tudo o que o
   site usa: o traço com fundo transparente em AVIF/WebP (`public/brand/casarao*`), o mapa de tempo da

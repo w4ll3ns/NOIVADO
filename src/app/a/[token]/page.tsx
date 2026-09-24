@@ -54,7 +54,7 @@ export default async function AlbumPage(props: PageProps<'/a/[token]'>) {
         <p className="caps" style={{ fontSize: '0.8rem' }}>
           <CoupleNames names={e.coupleNames} /> · {formatDateDots(e.date)}
         </p>
-        <Casarao forte luzes="acesas" className="album-page__casarao" sizes="300px" />
+        <Casarao forte className="album-page__casarao" sizes="300px" />
         <Divider />
 
         {state === 'open' ? (

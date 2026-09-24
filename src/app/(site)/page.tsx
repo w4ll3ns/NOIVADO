@@ -1,21 +1,19 @@
 import { IntroGate } from '@/components/intro/IntroGate'
 import { Hero } from '@/components/site/home/Hero'
 import { DressCodeSection, EventDetails, LocationSection } from '@/components/site/home/EventSections'
-import { FaqSection, GalleryTeaser, GiftsTeaser, GuestbookTeaser, StorySection } from '@/components/site/home/MoreSections'
+import { FaqSection, GalleryTeaser, GiftsTeaser, GuestbookTeaser } from '@/components/site/home/MoreSections'
 import { getSettings } from '@/lib/settings'
 import { getCurrentGuest } from '@/lib/invitations'
-import { countApprovedPhotos, getCouplePhotos, getFaqs, getMainAlbum, getSchedule, getStory } from '@/lib/content'
+import { countApprovedPhotos, getFaqs, getMainAlbum, getSchedule } from '@/lib/content'
 import { formatDateDots } from '@/lib/format'
 
 export default async function HomePage(props: PageProps<'/'>) {
   const sp = await props.searchParams
-  const [settings, guest, schedule, story, faqs, photos, album] = await Promise.all([
+  const [settings, guest, schedule, faqs, album] = await Promise.all([
     getSettings(),
     getCurrentGuest(),
     getSchedule(),
-    getStory(),
     getFaqs(),
-    getCouplePhotos(),
     getMainAlbum(),
   ])
   const approved = album ? await countApprovedPhotos(album.id) : 0
@@ -37,7 +35,6 @@ export default async function HomePage(props: PageProps<'/'>) {
         />
       ) : null}
       <Hero settings={settings} greeting={guest?.greeting} rsvpHref={rsvpHref} />
-      <StorySection settings={settings} milestones={story} photos={photos} />
       <EventDetails settings={settings} schedule={schedule} />
       <LocationSection settings={settings} />
       <DressCodeSection settings={settings} />

@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { Casarao } from '@/components/casarao/Casarao'
-import { Crest, Divider, FrameCorners } from '@/components/ornaments/Ornaments'
+import { Divider, Rule, SaveTheDateFrame } from '@/components/ornaments/Ornaments'
 import { CoupleNames } from '@/components/site/CoupleNames'
 import type { Settings } from '@/lib/settings-schema'
 import { daysUntil, formatDateLong } from '@/lib/format'
@@ -24,28 +24,29 @@ export function Hero({ settings, greeting, rsvpHref }: { settings: Settings; gre
   const e = settings.event
   return (
     <section id="inicio" className="hero">
-      <div className="hero__frame" aria-hidden="true">
-        <FrameCorners />
-      </div>
       <div className="container hero__content">
-        <Crest />
         {greeting ? <p className="greeting script">Olá, {greeting}!</p> : null}
-        <h1>
-          <span className="hero__title">{e.title}</span>
-          <span className="hero__names script" style={{ display: 'block' }}>
-            <CoupleNames names={e.coupleNames} />
-          </span>
-        </h1>
-        <div className="hero__facade">
-          <Casarao luzes="acender" priority alt={`Fachada da ${e.venueName}`} sizes="(max-width: 640px) 86vw, 420px" />
+        {/* O Save the Date, vivo: a moldura original com os textos do site dentro. */}
+        <div className="convite">
+          <SaveTheDateFrame className="convite__moldura" />
+          <div className="convite__miolo">
+            <h1 className="convite__titulo">
+              <span className="convite__evento">{e.title}</span>
+              <Divider className="convite__filete" />
+              <span className="convite__nomes script">
+                <CoupleNames names={e.coupleNames} />
+              </span>
+            </h1>
+            <Casarao forte priority alt={`Fachada da ${e.venueName}`} sizes="(max-width: 640px) 30vw, 180px" className="convite__casarao" />
+            <Divider className="convite__filete" />
+            <p className="convite__data">{formatDateLong(e.date)}</p>
+            <Rule className="convite__filete convite__filete--curto" />
+            <p className="convite__local">
+              {e.venueName}
+              {e.region ? ` - ${e.region}` : ''}
+            </p>
+          </div>
         </div>
-        <Divider />
-        <p className="hero__date">{formatDateLong(e.date)}</p>
-        <Divider />
-        <p className="hero__venue">
-          <strong>{e.venueName}</strong>
-          {e.region}
-        </p>
         <Countdown settings={settings} />
         <div className="btn-row btn-row--inline">
           <Link href={rsvpHref} className="btn btn--primary">

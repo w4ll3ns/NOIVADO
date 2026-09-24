@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from 'next'
-import { cormorant, garamond, pinyon } from './fonts'
+import { garamond, monteCarlo } from './fonts'
 import '@/styles/tokens.css'
 import '@/styles/base.css'
 import '@/styles/casarao.css'
@@ -36,7 +36,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="pt-BR" suppressHydrationWarning className={`${cormorant.variable} ${garamond.variable} ${pinyon.variable}`}>
+    <html lang="pt-BR" suppressHydrationWarning className={`${garamond.variable} ${monteCarlo.variable}`}>
       <body>{children}</body>
     </html>
   )

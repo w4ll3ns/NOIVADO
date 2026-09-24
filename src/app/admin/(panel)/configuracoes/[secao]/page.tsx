@@ -4,13 +4,12 @@ import { notFound } from 'next/navigation'
 import { asc } from 'drizzle-orm'
 import { PageHead } from '@/components/admin/ui'
 import { ConfirmSubmit } from '@/components/admin/ClientBits'
-import { MediaPicker } from '@/components/admin/MediaPicker'
 import { requireAdmin, hasRole } from '@/lib/auth/session'
 import { db, schema } from '@/lib/db'
 import { getSettings } from '@/lib/settings'
 import type { SettingsKey } from '@/lib/settings-schema'
 import { SettingsForm, type FieldDef } from '../SettingsForm'
-import { saveMilestoneAction, saveScheduleAction, saveSettingsAction } from '../actions'
+import { saveScheduleAction, saveSettingsAction } from '../actions'
 
 export const metadata: Metadata = { title: 'Configurações' }
 
@@ -64,16 +63,6 @@ const SECTIONS: Section[] = [
       { name: 'countdownTodayText', label: 'No dia do evento', type: 'text', span: true },
       { name: 'countdownPastText', label: 'Depois do evento', type: 'text', span: true },
       { name: 'showGiftsButton', label: 'Mostrar “Ver presentes” na home', type: 'checkbox' },
-    ],
-  },
-  {
-    slug: 'historia',
-    label: 'Nossa História',
-    key: 'story',
-    fields: [
-      { name: 'enabled', label: 'Mostrar a seção Nossa História', type: 'checkbox', span: true },
-      { name: 'title', label: 'Título', type: 'text' },
-      { name: 'intro', label: 'Texto (uma frase por linha)', type: 'textarea', rows: 5 },
     ],
   },
   { slug: 'programacao', label: 'Programação', key: null, fields: [] },
@@ -171,58 +160,8 @@ export default async function SettingsSectionPage(props: PageProps<'/admin/confi
           readOnly={!canEdit}
         />
       ) : null}
-      {section.slug === 'historia' ? <StoryEditor canEdit={canEdit} /> : null}
       {section.slug === 'programacao' ? <ScheduleEditor canEdit={canEdit} /> : null}
     </>
-  )
-}
-
-async function StoryEditor({ canEdit }: { canEdit: boolean }) {
-  const items = await db.select().from(schema.storyMilestones).orderBy(asc(schema.storyMilestones.sortOrder), asc(schema.storyMilestones.createdAt))
-  return (
-    <section className="a-card" style={{ marginTop: 16 }}>
-      <h2 className="a-card__title">
-        Linha do tempo <small>pequenos acontecimentos, com data e foto opcionais</small>
-      </h2>
-      <div style={{ display: 'grid', gap: 12 }}>
-        {[...items, null].map((m) => (
-          <form key={m?.id ?? 'new'} action={saveMilestoneAction} className="a-form-grid" style={{ borderTop: '1px solid var(--a-line)', paddingTop: 12 }}>
-            <input type="hidden" name="id" value={m?.id ?? ''} />
-            <label className="a-field">
-              <span>{m ? 'Data / marco' : 'Novo acontecimento — data / marco'}</span>
-              <input className="a-input" name="dateLabel" defaultValue={m?.dateLabel ?? ''} placeholder="Março de 2019" disabled={!canEdit} />
-            </label>
-            <label className="a-field">
-              <span>Título</span>
-              <input className="a-input" name="title" defaultValue={m?.title ?? ''} required disabled={!canEdit} />
-            </label>
-            <label className="a-field span-2">
-              <span>Texto curto</span>
-              <textarea className="a-textarea" name="text" rows={2} defaultValue={m?.text ?? ''} disabled={!canEdit} />
-            </label>
-            <div className="a-field">
-              <span>Foto (opcional)</span>
-              <MediaPicker name="mediaId" initialId={m?.mediaId ?? null} disabled={!canEdit} />
-            </div>
-            <div style={{ display: 'flex', gap: 10, alignItems: 'end', flexWrap: 'wrap' }}>
-              <label className="a-field" style={{ width: 90 }}>
-                <span>Ordem</span>
-                <input className="a-input" type="number" name="sortOrder" defaultValue={m?.sortOrder ?? items.length} disabled={!canEdit} />
-              </label>
-              <label className="a-check">
-                <input type="checkbox" name="isActive" defaultChecked={m?.isActive ?? true} disabled={!canEdit} /> Visível
-              </label>
-              {canEdit ? <button className="a-btn a-btn--primary a-btn--sm">{m ? 'Salvar' : 'Adicionar'}</button> : null}
-              {m && canEdit ? (
-                <ConfirmSubmit message="Excluir este acontecimento?" name="op" value="delete">
-                  Excluir
-                </ConfirmSubmit>
-              ) : null}
-            </div>
-          </form>
-        ))}
-      </div>
-    </section>
   )
 }
 

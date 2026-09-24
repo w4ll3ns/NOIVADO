@@ -9,7 +9,6 @@ export default async function SiteLayout({ children }: { children: React.ReactNo
   const [settings, guest] = await Promise.all([getSettings(), getCurrentGuest()])
   const links: NavLink[] = [
     { href: '/#inicio', label: 'Início' },
-    ...(settings.story.enabled ? [{ href: '/#historia', label: 'Nossa História' }] : []),
     { href: '/#noivado', label: 'O Noivado' },
     { href: '/#localizacao', label: 'Localização' },
     ...(settings.dressCode.enabled ? [{ href: '/#traje', label: 'Dress Code' }] : []),

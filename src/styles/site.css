@@ -25,22 +25,30 @@
   stroke: none;
   font-family: var(--font-title);
   font-size: 11px;
-  font-weight: 600;
+  font-weight: 500;
   letter-spacing: 0.1em;
 }
-.orn-divider {
-  width: min(240px, 70vw);
+/* Peças recortadas do Save the Date (<picture> com a arte em sépia). */
+.orn-peca {
+  display: block;
+}
+.orn-peca img {
+  display: block;
+  width: 100%;
   height: auto;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+.orn-divider {
+  width: min(260px, 72vw);
   margin: 18px auto;
 }
 .orn-rule {
-  width: 140px;
-  height: auto;
+  width: min(180px, 52vw);
   margin: 12px auto;
 }
 .orn-crest {
-  width: 170px;
-  height: auto;
+  width: 84px;
   margin: 0 auto;
 }
 .orn-heart {
@@ -82,27 +90,27 @@
   inset: 10px;
   pointer-events: none;
 }
+/* A peça é o canto inferior esquerdo do Save the Date; os outros três são espelhos. */
 .frame-corners .fc {
   position: absolute;
-  width: clamp(56px, 14vw, 110px);
-  height: auto;
-}
-.fc-tl {
-  top: 0;
-  left: 0;
-}
-.fc-tr {
-  top: 0;
-  right: 0;
-  transform: scaleX(-1);
+  width: clamp(64px, 17vw, 120px);
 }
 .fc-bl {
   bottom: 0;
   left: 0;
-  transform: scaleY(-1);
 }
 .fc-br {
   bottom: 0;
+  right: 0;
+  transform: scaleX(-1);
+}
+.fc-tl {
+  top: 0;
+  left: 0;
+  transform: scaleY(-1);
+}
+.fc-tr {
+  top: 0;
   right: 0;
   transform: scale(-1, -1);
 }
@@ -154,7 +162,7 @@
 .eyebrow {
   display: block;
   font-family: var(--font-title);
-  font-weight: 600;
+  font-weight: 500;
   font-size: var(--fs-caps);
   text-transform: uppercase;
   letter-spacing: var(--tracking-wide);
@@ -203,7 +211,7 @@
   background: var(--btn-bg);
   color: var(--btn-fg);
   font-family: var(--font-title);
-  font-weight: 600;
+  font-weight: 500;
   font-size: 0.95rem;
   letter-spacing: 0.2em;
   text-transform: uppercase;
@@ -310,12 +318,18 @@
   white-space: nowrap;
   padding-top: 4px;
 }
+.monogram__amp {
+  font-family: var(--font-text);
+  font-style: italic;
+  font-size: 0.62em;
+  padding: 0 0.06em;
+}
 .site-nav {
   display: none;
 }
 .site-nav a {
   font-family: var(--font-title);
-  font-weight: 600;
+  font-weight: 500;
   font-size: 0.74rem;
   letter-spacing: 0.16em;
   text-transform: uppercase;
@@ -344,7 +358,7 @@
   border: 0;
   background: none;
   font-family: var(--font-title);
-  font-weight: 600;
+  font-weight: 500;
   font-size: 0.8rem;
   letter-spacing: 0.22em;
   text-transform: uppercase;
@@ -422,7 +436,7 @@
   color: var(--ink);
 }
 .menu-sheet .orn-crest {
-  width: 130px;
+  width: 70px;
 }
 
 /* =========================================================
@@ -430,73 +444,93 @@
    ========================================================= */
 .hero {
   position: relative;
-  min-height: calc(100svh - var(--header-h));
-  display: flex;
-  align-items: center;
-  padding: clamp(44px, 9vw, 88px) 0 clamp(36px, 7vw, 64px);
+  padding: clamp(16px, 3.5vw, 36px) 0 clamp(36px, 7vw, 64px);
   text-align: center;
-  overflow: hidden;
-}
-.hero__frame {
-  position: absolute;
-  inset: clamp(8px, 2.4vw, 22px);
-  border: 1px solid var(--line-soft);
-  pointer-events: none;
-}
-.hero__frame::after {
-  content: '';
-  position: absolute;
-  inset: 6px;
-  border: 1px solid var(--line-soft);
-}
-.hero__frame .frame-corners {
-  inset: -4px;
 }
 .hero__content {
   position: relative;
   width: 100%;
 }
-.hero__title {
+
+/*
+ * O Save the Date, vivo: a moldura original (1764 x 2560) com os textos por cima.
+ * Tudo dentro dela é medido em cqw (largura da moldura), então as proporções são as do convite
+ * em qualquer tela; no computador ela cabe na altura da janela.
+ */
+.convite {
+  position: relative;
+  width: min(94vw, 560px, calc((100svh - var(--header-h) - 36px) * 0.689));
+  min-width: min(300px, 94vw);
+  aspect-ratio: 1764 / 2560;
+  margin: 0 auto;
+  container-type: inline-size;
+}
+.convite__moldura {
+  position: absolute;
+  inset: 0;
+}
+.convite__miolo {
+  position: absolute;
+  inset: 29% 20.5% 14.5%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+.convite__titulo {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.convite__evento {
   font-family: var(--font-title);
-  font-weight: 500;
-  font-size: clamp(1.15rem, 4.2vw, 1.6rem);
-  letter-spacing: 0.5em;
-  padding-left: 0.5em;
+  font-weight: 450;
+  font-size: 4.3cqw;
+  line-height: 1.2;
+  letter-spacing: 0.42em;
+  padding-left: 0.42em;
   text-transform: uppercase;
-  color: var(--sepia);
-  margin-top: 18px;
+  color: var(--sepia-deep);
 }
-.hero__names {
-  font-size: var(--fs-script-xl);
-  margin: 6px 0 2px;
-  line-height: 1.15;
+.convite .convite__filete {
+  width: 29.5cqw;
+  margin: 1.6cqw auto;
 }
-.hero__date {
-  font-family: var(--font-title);
-  font-size: clamp(1.25rem, 4.4vw, 1.6rem);
-  font-weight: 500;
-  color: var(--ink);
-  letter-spacing: 0.04em;
+.convite .convite__filete--curto {
+  width: 21cqw;
+  margin: 1.2cqw auto;
 }
-.hero__venue {
-  margin-top: 6px;
-  font-size: 1.05rem;
-  color: var(--ink-soft);
-  line-height: 1.5;
-}
-.hero__venue strong {
+.convite__nomes {
   display: block;
+  font-size: 10cqw;
+  line-height: 1.2;
+  white-space: nowrap;
+  color: var(--sepia-deep);
+}
+.convite__casarao {
+  width: 31.5cqw;
+  margin: 0.8cqw auto 0;
+}
+.convite__data {
+  margin: 0;
   font-family: var(--font-title);
-  font-weight: 600;
-  font-size: 0.95rem;
-  letter-spacing: 0.24em;
-  text-transform: uppercase;
-  color: var(--sepia);
+  font-weight: 450;
+  font-size: 4.2cqw;
+  line-height: 1.25;
+  letter-spacing: 0.02em;
+  color: var(--sepia-deep);
 }
-.hero__facade {
-  width: min(420px, 86vw);
-  margin: 26px auto 8px;
+.convite__local {
+  margin: 0;
+  font-family: var(--font-title);
+  font-weight: 450;
+  font-size: 3cqw;
+  line-height: 1.3;
+  color: var(--sepia-deep);
+  text-wrap: balance;
 }
+
 .countdown {
   margin: 12px auto 26px;
   font-style: italic;
@@ -506,7 +540,7 @@
 .countdown strong {
   font-family: var(--font-title);
   font-style: normal;
-  font-weight: 600;
+  font-weight: 500;
   font-size: 1.5em;
   color: var(--sepia);
   padding-inline: 2px;
@@ -534,11 +568,11 @@
   inset: 3px;
 }
 .paper--ornate .frame-corners .fc {
-  width: clamp(40px, 10vw, 64px);
+  width: clamp(48px, 12vw, 76px);
 }
 .paper__title {
   font-family: var(--font-title);
-  font-weight: 600;
+  font-weight: 500;
   font-size: var(--fs-caps);
   letter-spacing: var(--tracking-caps);
   text-transform: uppercase;
@@ -566,7 +600,7 @@
   color: var(--seal);
   text-align: center;
   font-family: var(--font-title);
-  font-weight: 600;
+  font-weight: 500;
   font-size: 0.7rem;
   letter-spacing: 0.16em;
   text-transform: uppercase;
@@ -594,7 +628,7 @@
   align-items: center;
   gap: 8px;
   font-family: var(--font-title);
-  font-weight: 600;
+  font-weight: 500;
   font-size: 0.85rem;
   letter-spacing: 0.14em;
   text-transform: uppercase;
@@ -607,134 +641,6 @@
 }
 .status-line--no {
   color: var(--rose);
-}
-
-/* =========================================================
-   Nossa história
-   ========================================================= */
-.story-intro {
-  max-width: var(--measure);
-  margin: 0 auto;
-  text-align: center;
-  font-size: var(--fs-lead);
-  font-style: italic;
-  line-height: 1.8;
-  color: var(--ink-soft);
-  white-space: pre-line;
-}
-.timeline {
-  position: relative;
-  list-style: none;
-  margin: clamp(40px, 8vw, 72px) auto 0;
-  padding: 0;
-  max-width: 760px;
-}
-.timeline::before {
-  content: '';
-  position: absolute;
-  top: 6px;
-  bottom: 6px;
-  left: 11px;
-  width: 1px;
-  background: var(--line);
-}
-.timeline__item {
-  position: relative;
-  padding: 0 0 clamp(32px, 6vw, 48px) 44px;
-}
-.timeline__item:last-child {
-  padding-bottom: 0;
-}
-.timeline__node {
-  position: absolute;
-  left: 5px;
-  top: 6px;
-  width: 13px;
-  height: 13px;
-  transform: rotate(45deg);
-  border: 1px solid var(--sepia);
-  background: var(--paper);
-}
-.timeline__date {
-  font-family: var(--font-title);
-  font-weight: 600;
-  font-size: 0.8rem;
-  letter-spacing: 0.24em;
-  text-transform: uppercase;
-  color: var(--taupe);
-}
-.timeline__title {
-  font-size: var(--fs-title);
-  margin: 2px 0 6px;
-}
-.timeline__text {
-  color: var(--ink-soft);
-}
-.timeline__photo {
-  margin-top: 14px;
-  border: 1px solid var(--line);
-  padding: 6px;
-  background: var(--ivory);
-  max-width: 420px;
-}
-@media (min-width: 760px) {
-  .timeline::before {
-    left: 50%;
-  }
-  .timeline__item {
-    width: 50%;
-    padding-left: 0;
-    padding-right: 48px;
-    text-align: right;
-  }
-  .timeline__item:nth-child(even) {
-    margin-left: 50%;
-    padding-right: 0;
-    padding-left: 48px;
-    text-align: left;
-  }
-  .timeline__node {
-    left: auto;
-    right: -7px;
-  }
-  .timeline__item:nth-child(even) .timeline__node {
-    right: auto;
-    left: -6px;
-  }
-  .timeline__item:nth-child(odd) .timeline__photo {
-    margin-left: auto;
-  }
-}
-
-.couple-gallery {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 10px;
-  margin-top: clamp(40px, 8vw, 64px);
-}
-@media (min-width: 760px) {
-  .couple-gallery {
-    grid-template-columns: repeat(3, 1fr);
-    gap: 16px;
-  }
-}
-.couple-gallery figure {
-  margin: 0;
-  background: var(--ivory);
-  border: 1px solid var(--line-soft);
-  padding: 6px;
-}
-.couple-gallery img {
-  width: 100%;
-  aspect-ratio: 4 / 5;
-  object-fit: cover;
-}
-.couple-gallery figcaption {
-  font-size: var(--fs-tiny);
-  font-style: italic;
-  color: var(--ink-soft);
-  text-align: center;
-  padding: 6px 4px 2px;
 }
 
 /* =========================================================
@@ -770,7 +676,7 @@
 }
 .detail__label {
   font-family: var(--font-title);
-  font-weight: 600;
+  font-weight: 500;
   font-size: 0.8rem;
   letter-spacing: 0.26em;
   text-transform: uppercase;
@@ -840,7 +746,7 @@
 }
 .guidance__item h3 {
   font-size: 0.82rem;
-  font-weight: 600;
+  font-weight: 500;
   letter-spacing: 0.24em;
   text-transform: uppercase;
   margin-bottom: 4px;
@@ -945,7 +851,7 @@
 .dress__group-title {
   margin-top: 34px;
   font-family: var(--font-title);
-  font-weight: 600;
+  font-weight: 500;
   font-size: 0.8rem;
   letter-spacing: 0.26em;
   text-transform: uppercase;
@@ -1023,7 +929,7 @@
 }
 .field__label {
   font-family: var(--font-title);
-  font-weight: 600;
+  font-weight: 500;
   font-size: 0.8rem;
   letter-spacing: 0.2em;
   text-transform: uppercase;
@@ -1181,7 +1087,7 @@
   border: 1px solid var(--line);
   background: rgba(252, 247, 242, 0.7);
   font-family: var(--font-title);
-  font-weight: 600;
+  font-weight: 500;
   font-size: 0.86rem;
   letter-spacing: 0.16em;
   text-transform: uppercase;
@@ -1354,7 +1260,7 @@
 }
 .info-list dt {
   font-family: var(--font-title);
-  font-weight: 600;
+  font-weight: 500;
   font-size: 0.74rem;
   letter-spacing: 0.2em;
   text-transform: uppercase;
@@ -1457,7 +1363,7 @@ a.gift:hover {
 .gift__value {
   font-family: var(--font-title);
   font-size: 1.25rem;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--sepia);
   letter-spacing: 0.04em;
 }
@@ -1468,7 +1374,7 @@ a.gift:hover {
 }
 .gift__cta {
   font-family: var(--font-title);
-  font-weight: 600;
+  font-weight: 500;
   font-size: 0.76rem;
   letter-spacing: 0.24em;
   text-transform: uppercase;
@@ -1482,7 +1388,7 @@ a.gift:hover .gift__cta {
   top: 12px;
   right: 14px;
   font-family: var(--font-title);
-  font-weight: 600;
+  font-weight: 500;
   font-size: 0.66rem;
   letter-spacing: 0.18em;
   text-transform: uppercase;
@@ -1543,7 +1449,7 @@ a.gift:hover .gift__cta {
   background: rgba(252, 247, 242, 0.75);
   font-family: var(--font-title);
   font-size: 1.1rem;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--ink-soft);
   transition: all var(--dur-fast) var(--ease);
 }
@@ -1646,7 +1552,7 @@ a.gift:hover .gift__cta {
   background: rgba(29, 24, 20, 0.35);
   color: var(--ivory);
   font-family: var(--font-title);
-  font-weight: 600;
+  font-weight: 500;
   font-size: 0.78rem;
   letter-spacing: 0.18em;
   text-transform: uppercase;
@@ -1974,36 +1880,6 @@ a.gift:hover .gift__cta {
   font-size: var(--fs-lead);
 }
 
-/* Save the Date dentro da seção do evento */
-.std-card {
-  margin: clamp(48px, 9vw, 80px) auto 0;
-  max-width: 380px;
-  text-align: center;
-}
-.std-card__frame {
-  position: relative;
-  padding: 14px;
-  background: var(--ivory);
-  border: 1px solid var(--line);
-  outline: 1px solid var(--line-soft);
-  outline-offset: -7px;
-}
-.std-card__frame .frame-corners {
-  inset: -6px;
-}
-.std-card__frame .frame-corners .fc {
-  width: 46px;
-}
-.std-card img {
-  width: 100%;
-  height: auto;
-}
-.std-card figcaption {
-  margin-top: 12px;
-  font-style: italic;
-  color: var(--ink-soft);
-  font-size: var(--fs-small);
-}
 .dress__icon {
   width: 52px;
   height: 52px;

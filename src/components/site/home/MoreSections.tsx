@@ -3,66 +3,6 @@ import { SectionHead } from '@/components/site/SectionHead'
 import { EngravedIcon } from '@/components/ornaments/EngravedIcon'
 import type { Settings } from '@/lib/settings-schema'
 import { eventTemplateValues, renderTemplate } from '@/lib/templates'
-import { mediaUrl } from '@/lib/media'
-
-type Milestone = { id: string; dateLabel: string | null; title: string; text: string | null; mediaId: string | null }
-type CouplePhoto = { id: string; caption: string | null; mediaId: string; width: number; height: number; color: string | null; alt: string | null }
-
-export function StorySection({ settings, milestones, photos }: { settings: Settings; milestones: Milestone[]; photos: CouplePhoto[] }) {
-  if (!settings.story.enabled) return null
-  return (
-    <section id="historia" className="section">
-      <div className="container">
-        <SectionHead eyebrow="Era uma vez" title={settings.story.title} />
-        <p className="story-intro">{settings.story.intro}</p>
-        {milestones.length ? (
-          <ol className="timeline">
-            {milestones.map((m) => (
-              <li key={m.id} className="timeline__item">
-                <span className="timeline__node" aria-hidden="true" />
-                {m.dateLabel ? <p className="timeline__date">{m.dateLabel}</p> : null}
-                <h3 className="timeline__title">{m.title}</h3>
-                {m.text ? <p className="timeline__text">{m.text}</p> : null}
-                {m.mediaId ? (
-                  <div className="timeline__photo">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={mediaUrl(m.mediaId, 'web')!} alt={m.title} loading="lazy" decoding="async" />
-                  </div>
-                ) : null}
-              </li>
-            ))}
-          </ol>
-        ) : null}
-        {photos.length ? (
-          <>
-            <div className="couple-gallery">
-              {photos.slice(0, 6).map((p) => (
-                <figure key={p.id}>
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={mediaUrl(p.mediaId, 'thumb')!}
-                    alt={p.alt || p.caption || 'Maby e Chris'}
-                    loading="lazy"
-                    decoding="async"
-                    width={p.width}
-                    height={p.height}
-                    style={{ backgroundColor: p.color ?? undefined }}
-                  />
-                  {p.caption ? <figcaption>{p.caption}</figcaption> : null}
-                </figure>
-              ))}
-            </div>
-            <p className="center" style={{ marginTop: 22 }}>
-              <Link href="/galeria" className="btn btn--link">
-                Nossa história em fotos
-              </Link>
-            </p>
-          </>
-        ) : null}
-      </div>
-    </section>
-  )
-}
 
 export function GiftsTeaser({ settings }: { settings: Settings }) {
   if (!settings.gifts.enabled) return null

@@ -21,7 +21,7 @@ export default async function CoupleGalleryAdmin() {
     <>
       <PageHead
         title="Nossa história em fotos"
-        subtitle="Fotos oficiais do casal — separadas do álbum colaborativo. Aparecem em “Nossa História” e na Galeria."
+        subtitle="Fotos oficiais do casal — separadas do álbum colaborativo. Aparecem na Galeria."
         actions={canEdit ? <MediaUploader purpose="gallery" label="+ Enviar fotos" /> : null}
       />
       {rows.length ? (

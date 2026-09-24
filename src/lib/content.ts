@@ -10,14 +10,6 @@ export async function getSchedule() {
     .orderBy(asc(schema.scheduleItems.sortOrder), asc(schema.scheduleItems.createdAt))
 }
 
-export async function getStory() {
-  return db
-    .select()
-    .from(schema.storyMilestones)
-    .where(eq(schema.storyMilestones.isActive, true))
-    .orderBy(asc(schema.storyMilestones.sortOrder), asc(schema.storyMilestones.createdAt))
-}
-
 export async function getFaqs() {
   return db
     .select()
