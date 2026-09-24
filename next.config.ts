@@ -15,7 +15,7 @@ const securityHeaders = [
 const nextConfig: NextConfig = {
   output: 'standalone',
   poweredByHeader: false,
-  serverExternalPackages: ['exceljs', 'pdf-lib', 'qrcode', 'postgres'],
+  serverExternalPackages: ['exceljs', 'pdf-lib', '@pdf-lib/fontkit', 'qrcode', 'postgres'],
   images: {
     formats: ['image/avif', 'image/webp'],
   },

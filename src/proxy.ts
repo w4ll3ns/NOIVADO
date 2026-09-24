@@ -17,7 +17,7 @@ function buildCsp(nonce: string, isDev: boolean) {
     `base-uri 'self'`,
     `form-action 'self' ${MP_FORM_TARGETS}`,
     `frame-ancestors 'none'`,
-    ...(isDev ? [] : ['upgrade-insecure-requests']),
+    ...(isDev || process.env.FORCE_HTTPS === 'false' ? [] : ['upgrade-insecure-requests']),
   ].join('; ')
 }
 

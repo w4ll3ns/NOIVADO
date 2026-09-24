@@ -1,0 +1,60 @@
+# Produção em um único servidor (VPS): Postgres + app + Caddy (HTTPS automático).
+#   1. cp .env.example .env   (preencha APP_URL, APP_SECRET, MP_*, ADMIN_*; DOMAIN abaixo)
+#   2. docker compose up -d --build
+# O serviço "setup" aplica as migrações e o conteúdo inicial antes da aplicação subir.
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: noivado
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-troque-esta-senha}
+      POSTGRES_DB: noivado
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U noivado']
+      interval: 5s
+      retries: 10
+
+  setup:
+    build: { context: ., target: tools }
+    env_file: .env
+    environment:
+      DATABASE_URL: postgres://noivado:${POSTGRES_PASSWORD:-troque-esta-senha}@db:5432/noivado
+    depends_on:
+      db: { condition: service_healthy }
+    restart: 'no'
+
+  app:
+    build: { context: ., target: runner }
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DATABASE_URL: postgres://noivado:${POSTGRES_PASSWORD:-troque-esta-senha}@db:5432/noivado
+      STORAGE_LOCAL_DIR: /app/storage
+    volumes:
+      - storage:/app/storage
+    depends_on:
+      setup: { condition: service_completed_successfully }
+    expose:
+      - '3000'
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - '80:80'
+      - '443:443'
+    environment:
+      DOMAIN: ${DOMAIN:-localhost}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+    depends_on:
+      - app
+
+volumes:
+  pgdata:
+  storage:
+  caddy_data:
