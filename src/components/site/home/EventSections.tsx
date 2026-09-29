@@ -1,8 +1,8 @@
-import { CompassRose } from '@/components/ornaments/Ornaments'
+import { CompassRose, Rule } from '@/components/ornaments/Ornaments'
 import { EngravedIcon } from '@/components/ornaments/EngravedIcon'
 import { SectionHead } from '@/components/site/SectionHead'
 import type { Settings } from '@/lib/settings-schema'
-import { formatDateDots, formatDateLong, formatTime, weekdayOf } from '@/lib/format'
+import { formatDateLong, formatTime, weekdayOf } from '@/lib/format'
 import { googleMapsUrl, wazeUrl } from '@/lib/event'
 import { mediaUrl } from '@/lib/media'
 
@@ -21,7 +21,7 @@ export function EventDetails({ settings, schedule }: { settings: Settings; sched
   return (
     <section id="noivado" className="section section--cream">
       <div className="container">
-        <SectionHead eyebrow={formatDateDots(e.date)} title={`O nosso ${e.title.toLowerCase()}`} />
+        <SectionHead title={`O nosso ${e.title.toLowerCase()}`} />
         <div className="details-grid">
           <div className="detail">
             <EngravedIcon name="aliancas" />
@@ -46,25 +46,29 @@ export function EventDetails({ settings, schedule }: { settings: Settings; sched
         </div>
 
         {schedule.length ? (
-          <ol className={withIcons ? 'programme programme--icones' : 'programme'} aria-label="Programação">
-            {schedule.map((s) => (
-              <li key={s.id} className="programme__item">
-                <span className="programme__time">{s.timeLabel}</span>
-                {withIcons ? (
+          <div className="programme-block">
+            <h3 className="programme__heading">Programação</h3>
+            <Rule />
+            {/* Linha do tempo: ícone | losango na linha | horário e momento */}
+            <ol className={withIcons ? 'programme' : 'programme programme--sem-icones'} aria-label="Programação">
+              {schedule.map((s) => (
+                <li key={s.id} className="programme__item">
                   <span className="programme__icon" aria-hidden="true">
                     {s.iconMediaId ? (
                       // eslint-disable-next-line @next/next/no-img-element
-                      <img src={mediaUrl(s.iconMediaId, 'thumb')!} alt="" width={52} height={52} loading="lazy" decoding="async" />
+                      <img src={mediaUrl(s.iconMediaId, 'thumb')!} alt="" width={96} height={96} loading="lazy" decoding="async" />
                     ) : null}
                   </span>
-                ) : null}
-                <span>
-                  <span className="programme__title">{s.title}</span>
-                  {s.description ? <span className="programme__desc" style={{ display: 'block' }}>{s.description}</span> : null}
-                </span>
-              </li>
-            ))}
-          </ol>
+                  <span className="programme__marker" aria-hidden="true" />
+                  <span className="programme__text">
+                    <span className="programme__time">{s.timeLabel}</span>
+                    <span className="programme__title">{s.title}</span>
+                    {s.description ? <span className="programme__desc">{s.description}</span> : null}
+                  </span>
+                </li>
+              ))}
+            </ol>
+          </div>
         ) : null}
 
         {guidance.length ? (
