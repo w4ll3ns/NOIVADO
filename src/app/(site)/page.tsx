@@ -34,7 +34,7 @@ export default async function HomePage(props: PageProps<'/'>) {
           force={sp.abertura === '1'}
         />
       ) : null}
-      <Hero settings={settings} greeting={guest?.greeting} rsvpHref={rsvpHref} />
+      <Hero settings={settings} greeting={guest?.greeting} />
       <EventDetails settings={settings} schedule={schedule} />
       <GuideSection settings={settings} rsvpHref={rsvpHref} responded={!!guest && guest.invitation.rsvpStatus !== 'pending'} />
       <GalleryTeaser approved={approved} publicEnabled={!!album?.publicGalleryEnabled} />

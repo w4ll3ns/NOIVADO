@@ -1,7 +1,6 @@
 'use client'
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
-import { INTRO_STORAGE_KEY } from './constants'
 import { desenhar, prepararDesenho, type Desenho } from './desenho'
 import { iniciarParticulas } from './particulas'
 
@@ -37,13 +36,9 @@ const LIGHTS_MS = 1900
 
 const useIsoLayoutEffect = typeof window === 'undefined' ? useEffect : useLayoutEffect
 
+/** Vista nesta visita: a classe some quando a página é recarregada ou o site é aberto de novo. */
 function markSeen() {
   document.documentElement.classList.add('intro-seen')
-  try {
-    localStorage.setItem(INTRO_STORAGE_KEY, String(Date.now()))
-  } catch {
-    /* modo privado: tudo bem, apenas não lembramos */
-  }
 }
 
 export function CasaraoIntro(props: Props) {
@@ -60,7 +55,7 @@ export function CasaraoIntro(props: Props) {
   const desenho = useRef<Desenho | null>(null)
   const phaseRef = useRef<Phase>('drawing')
   phaseRef.current = phase
-  /** Decidido antes da pintura: este aparelho já viu a abertura. */
+  /** Decidido antes da pintura: a abertura já tocou nesta visita. */
   const seenRef = useRef(false)
 
   const later = (ms: number, fn: () => void) => {
@@ -71,21 +66,14 @@ export function CasaraoIntro(props: Props) {
     timers.current = []
   }
 
-  // Já viu neste aparelho? Some antes da pintura (navegação no cliente não roda o script inline).
+  // Já tocou nesta visita (voltou à home navegando pelo site)? Some antes da pintura.
   useIsoLayoutEffect(() => {
     if (props.force) {
       document.documentElement.classList.remove('intro-seen')
       return
     }
-    let seen = false
-    try {
-      seen = !!localStorage.getItem(INTRO_STORAGE_KEY)
-    } catch {
-      seen = false
-    }
-    if (seen || document.documentElement.classList.contains('intro-seen')) {
+    if (document.documentElement.classList.contains('intro-seen')) {
       seenRef.current = true
-      document.documentElement.classList.add('intro-seen')
       setPhase('done')
     }
   }, [props.force])

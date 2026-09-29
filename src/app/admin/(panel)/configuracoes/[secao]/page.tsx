@@ -63,7 +63,6 @@ const SECTIONS: Section[] = [
       { name: 'countdownText', label: 'Contador', type: 'text', span: true, help: 'Use {{dias}} onde entra o número' },
       { name: 'countdownTodayText', label: 'No dia do evento', type: 'text', span: true },
       { name: 'countdownPastText', label: 'Depois do evento', type: 'text', span: true },
-      { name: 'showGiftsButton', label: 'Mostrar “Ver presentes” na home', type: 'checkbox' },
     ],
   },
   { slug: 'programacao', label: 'Programação', key: null, fields: [] },

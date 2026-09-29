@@ -51,6 +51,7 @@ export const homeSettingsSchema = z.object({
   countdownText: text('Faltam {{dias}} dias para celebrarmos juntos.', 200),
   countdownTodayText: text('É hoje! Estamos esperando por você.', 200),
   countdownPastText: text('Obrigado por celebrar conosco.', 200),
+  /** Não é mais usado (o botão saiu do topo da home); fica para não invalidar configurações salvas. */
   showGiftsButton: z.boolean().default(true),
 })
 

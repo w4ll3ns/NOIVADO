@@ -1,4 +1,3 @@
-import Link from 'next/link'
 import { Casarao } from '@/components/casarao/Casarao'
 import { Divider, Rule, SaveTheDateFrame } from '@/components/ornaments/Ornaments'
 import { CoupleNames } from '@/components/site/CoupleNames'
@@ -20,7 +19,7 @@ export function Countdown({ settings }: { settings: Settings }) {
   )
 }
 
-export function Hero({ settings, greeting, rsvpHref }: { settings: Settings; greeting?: string | null; rsvpHref: string }) {
+export function Hero({ settings, greeting }: { settings: Settings; greeting?: string | null }) {
   const e = settings.event
   return (
     <section id="inicio" className="hero">
@@ -48,21 +47,6 @@ export function Hero({ settings, greeting, rsvpHref }: { settings: Settings; gre
           </div>
         </div>
         <Countdown settings={settings} />
-        <div className="btn-row btn-row--inline">
-          <Link href={rsvpHref} className="btn btn--primary">
-            Confirmar presença
-          </Link>
-          <Link href="/#noivado" className="btn">
-            Ver detalhes
-          </Link>
-        </div>
-        {settings.gifts.enabled && settings.home.showGiftsButton ? (
-          <p style={{ marginTop: 14 }}>
-            <Link href="/presentes" className="btn btn--link">
-              Ver presentes
-            </Link>
-          </p>
-        ) : null}
       </div>
     </section>
   )
