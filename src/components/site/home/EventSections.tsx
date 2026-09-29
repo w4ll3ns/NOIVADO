@@ -1,12 +1,12 @@
 import Link from 'next/link'
-import type { CSSProperties } from 'react'
-import { CompassRose, Rule } from '@/components/ornaments/Ornaments'
+import { Rule } from '@/components/ornaments/Ornaments'
 import { EngravedIcon } from '@/components/ornaments/EngravedIcon'
 import { SectionHead } from '@/components/site/SectionHead'
 import type { Settings } from '@/lib/settings-schema'
 import { endOfDayInTz, formatDateLong, weekdayOf } from '@/lib/format'
 import { eventTime, googleMapsUrl, wazeUrl } from '@/lib/event'
 import { mediaUrl } from '@/lib/media'
+import { LocalButton } from './LocalModal'
 
 type ScheduleItem = { id: string; timeLabel: string; title: string; description: string | null; iconMediaId: string | null }
 
@@ -88,66 +88,65 @@ export function EventDetails({ settings, schedule }: { settings: Settings; sched
   )
 }
 
-/** Localização, Dress Code, Lista de Presentes e Confirmar presença, reunidos numa seção só. */
+/** Localização, Dress Code, Lista de Presentes e Confirmar presença: botões um embaixo do outro. */
 export function GuideSection({ settings, rsvpHref, responded }: { settings: Settings; rsvpHref: string; responded: boolean }) {
   const e = settings.event
   const r = settings.rsvp
   const deadline = r.deadline ? endOfDayInTz(r.deadline) : null
   const rsvpOpen = !deadline || deadline.getTime() > Date.now()
-  const atalhos: Atalho[] = [
-    { href: googleMapsUrl(e), external: true, icon: 'mapa', title: 'Google Maps', sub: 'Como chegar' },
-    { href: wazeUrl(e), external: true, icon: 'pin', title: 'Waze', sub: 'Como chegar' },
-    ...(settings.dressCode.enabled
-      ? [{ href: '/traje', icon: 'vestido', title: 'Dress Code', sub: settings.dressCode.type }]
-      : []),
-    ...(settings.gifts.enabled
-      ? [{ href: '/presentes', icon: 'presente', title: 'Lista de Presentes', sub: 'Com carinho' }]
-      : []),
-  ]
+  const prazo = r.deadline && rsvpOpen ? `${responded ? 'Você pode alterar' : 'Confirme'} até ${formatDateLong(r.deadline)}` : null
   return (
     <section id="localizacao" className="section">
       <div className="container">
         <SectionHead eyebrow="Para o grande dia" title="Informações" />
-        <div className="guia">
-          <CompassRose title="Rosa dos ventos" />
-          <p className="guia__venue">{e.venueName}</p>
-          <p className="guia__address">{e.address}</p>
-          <ul className="atalhos" style={{ '--n': atalhos.length } as CSSProperties}>
-            {atalhos.map((a) => {
-              const body = (
-                <>
-                  <EngravedIcon name={a.icon} />
-                  <span className="atalho__titulo">{a.title}</span>
-                  <span className="atalho__sub">{a.sub}</span>
-                </>
-              )
-              return (
-                <li key={a.title}>
-                  {a.external ? (
-                    <a className="atalho" href={a.href} target="_blank" rel="noopener noreferrer">
-                      {body}
-                    </a>
-                  ) : (
-                    <Link className="atalho" href={a.href}>
-                      {body}
-                    </Link>
-                  )}
-                </li>
-              )
-            })}
-          </ul>
-          <Link href={rsvpHref} className="btn btn--primary guia__rsvp">
-            {responded ? 'Minha presença' : 'Confirmar presença'}
-          </Link>
-          {r.deadline && rsvpOpen ? (
-            <p className="guia__prazo">
-              {responded ? 'Você pode alterar' : 'Confirme'} até {formatDateLong(r.deadline)}.
-            </p>
+        <ul className="atalhos">
+          <li>
+            <LocalButton
+              className="atalho"
+              venue={e.venueName}
+              address={e.address || e.region}
+              mapsUrl={googleMapsUrl(e)}
+              wazeUrl={wazeUrl(e)}
+            >
+              <AtalhoBody icon="mapa" title="Localização" sub="Google Maps ou Waze" />
+            </LocalButton>
+          </li>
+          {settings.dressCode.enabled ? (
+            <li>
+              <Link className="atalho" href="/traje">
+                <AtalhoBody icon="vestido" title="Dress Code" sub={settings.dressCode.type} />
+              </Link>
+            </li>
           ) : null}
-        </div>
+          {settings.gifts.enabled ? (
+            <li>
+              <Link className="atalho" href="/presentes">
+                <AtalhoBody icon="presente" title="Lista de Presentes" sub="Com carinho" />
+              </Link>
+            </li>
+          ) : null}
+          <li>
+            <Link className="atalho atalho--destaque" href={rsvpHref}>
+              <AtalhoBody icon="envelope" title={responded ? 'Minha presença' : 'Confirmar presença'} sub={prazo} />
+            </Link>
+          </li>
+        </ul>
       </div>
     </section>
   )
 }
 
-type Atalho = { href: string; external?: boolean; icon: string; title: string; sub: string }
+function AtalhoBody({ icon, title, sub }: { icon: string; title: string; sub?: string | null }) {
+  return (
+    <>
+      <EngravedIcon name={icon} />
+      <span className="atalho__texto">
+        <span className="atalho__titulo">{title}</span>
+        {sub ? <span className="atalho__sub">{sub}</span> : null}
+      </span>
+      <svg className="atalho__seta" viewBox="0 0 12 20" aria-hidden="true" focusable="false">
+        <path d="M2 2 L10 10 L2 18" />
+      </svg>
+    </>
+  )
+}
