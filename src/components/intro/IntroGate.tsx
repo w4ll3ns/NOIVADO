@@ -8,6 +8,9 @@ const TEMPO_SRC = '/brand/casarao-tempo.webp'
 
 type Props = {
   coupleNames: string
+  eventTitle: string
+  /** Tamanho do nome do casal, em % do original. */
+  namesSize: number
   dateDots: string
   phrase: string
   buttonLabel: string
@@ -34,6 +37,8 @@ export async function IntroGate(props: Props) {
       <noscript dangerouslySetInnerHTML={{ __html: '<style>.intro{display:none!important}body{overflow:auto!important}</style>' }} />
       <CasaraoIntro
         names={<CoupleNames names={props.coupleNames} />}
+        namesSize={props.namesSize}
+        eventTitle={props.eventTitle}
         dateDots={props.dateDots}
         phrase={props.phrase}
         buttonLabel={props.buttonLabel}

@@ -47,7 +47,10 @@ export const introSettingsSchema = z.object({
   welcomePhraseGuest: text('Entre e celebre conosco este novo capítulo.', 200),
   /** Música de fundo (MP3/M4A enviado no painel): começa no "Entrar" da abertura. '' = sem música. */
   musicMediaId: z.union([z.string().uuid(), z.literal('')]).default(''),
-  musicVolume: z.number().int().min(0).max(100).default(60),
+  musicVolume: z.number().int().min(0, 'Use um valor entre 0 e 100').max(100, 'Use um valor entre 0 e 100').default(60),
+  /** Tamanho do nome do casal, em % do tamanho original do desenho (100 = original). */
+  namesSizeIntro: z.number().int().min(50, 'Use um valor entre 50 e 150').max(150, 'Use um valor entre 50 e 150').default(80),
+  namesSizeHome: z.number().int().min(50, 'Use um valor entre 50 e 150').max(150, 'Use um valor entre 50 e 150').default(85),
 })
 
 export const homeSettingsSchema = z.object({

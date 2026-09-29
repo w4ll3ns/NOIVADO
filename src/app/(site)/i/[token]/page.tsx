@@ -65,6 +65,8 @@ export default async function PortalPage(props: PageProps<'/i/[token]'>) {
       {settings.intro.enabled && !preview ? (
         <IntroGate
           coupleNames={e.coupleNames}
+          eventTitle={e.title}
+          namesSize={settings.intro.namesSizeIntro}
           venueName={e.venueName}
           dateDots={formatDateDots(e.date)}
           phrase={settings.intro.phrase}

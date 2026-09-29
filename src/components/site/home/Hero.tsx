@@ -1,6 +1,7 @@
 import { Casarao } from '@/components/casarao/Casarao'
 import { Divider, Rule, SaveTheDateFrame } from '@/components/ornaments/Ornaments'
 import { CoupleNames } from '@/components/site/CoupleNames'
+import type { CSSProperties } from 'react'
 import type { Settings } from '@/lib/settings-schema'
 import { daysUntil, formatDateLong } from '@/lib/format'
 
@@ -32,7 +33,7 @@ export function Hero({ settings, greeting }: { settings: Settings; greeting?: st
             <h1 className="convite__titulo">
               <span className="convite__evento">{e.title}</span>
               <Divider className="convite__filete" />
-              <span className="convite__nomes script">
+              <span className="convite__nomes script" style={{ '--nomes-escala': settings.intro.namesSizeHome / 100 } as CSSProperties}>
                 <CoupleNames names={e.coupleNames} />
               </span>
             </h1>

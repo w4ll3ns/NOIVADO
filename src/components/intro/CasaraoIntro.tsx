@@ -16,6 +16,10 @@ type Phase = 'drawing' | 'lighting' | 'idle' | 'opening' | 'welcome' | 'leaving'
 
 type Props = {
   names: ReactNode
+  /** Tamanho do nome do casal, em % do original. */
+  namesSize: number
+  /** "Noivado": fica no canto de cima, só como texto. */
+  eventTitle: string
   dateDots: string
   phrase: string
   buttonLabel: string
@@ -35,6 +39,9 @@ const DRAW_MS = 3400
 /** Se as imagens demorarem mais que isso, pula o desenho e só acende as luzes. */
 const LOAD_BUDGET_MS = 2600
 const LIGHTS_MS = 1900
+/** Boas-vindas na tela antes de esmaecer, e quanto dura o esmaecer (igual ao CSS de "leaving"). */
+const WELCOME_MS = 2400
+const FADE_MS = 2000
 
 const useIsoLayoutEffect = typeof window === 'undefined' ? useEffect : useLayoutEffect
 
@@ -194,8 +201,8 @@ export function CasaraoIntro(props: Props) {
       return
     }
     later(2150, () => setPhase('welcome'))
-    later(3550, () => setPhase('leaving'))
-    later(4150, finish)
+    later(2150 + WELCOME_MS, () => setPhase('leaving'))
+    later(2150 + WELCOME_MS + FADE_MS, finish)
   }
 
   if (phase === 'done') return null
@@ -215,12 +222,12 @@ export function CasaraoIntro(props: Props) {
       aria-modal="true"
       aria-label="Abertura do convite"
     >
-      <button type="button" className="intro__skip" onClick={skip}>
-        Pular abertura <span aria-hidden="true">›</span>
-      </button>
+      <p className="intro__marca">{props.eventTitle}</p>
 
       <header className="intro__top">
-        <p className="intro__names script">{props.names}</p>
+        <p className="intro__names script" style={{ '--nomes-escala': props.namesSize / 100 } as CSSProperties}>
+          {props.names}
+        </p>
         <p className="intro__date">{props.dateDots}</p>
       </header>
 

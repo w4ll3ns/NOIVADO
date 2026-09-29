@@ -94,7 +94,7 @@ export function prepararParaAbertura() {
   }
 }
 
-/** Clique em "Entrar" ou "Pular abertura" (precisa ser chamado dentro do clique). */
+/** Clique em "Entrar" (ou Esc na abertura): precisa ser chamado dentro do gesto do visitante. */
 export function tocarDaAbertura() {
   if (!pausadaPeloConvidado()) tocar(2800)
 }

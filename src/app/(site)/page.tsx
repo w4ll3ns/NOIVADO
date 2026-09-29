@@ -25,6 +25,8 @@ export default async function HomePage(props: PageProps<'/'>) {
       {settings.intro.enabled ? (
         <IntroGate
           coupleNames={e.coupleNames}
+          eventTitle={e.title}
+          namesSize={settings.intro.namesSizeIntro}
           venueName={e.venueName}
           dateDots={formatDateDots(e.date)}
           phrase={settings.intro.phrase}

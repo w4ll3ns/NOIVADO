@@ -24,25 +24,25 @@ html:not(.intro-seen) body:has(.intro) {
   --light-y: 70%;
 }
 
-.intro__skip {
+/* "Noivado" no canto de cima: só texto (onde ficava o "Pular abertura"). */
+.intro__marca {
   position: absolute;
   top: max(10px, env(safe-area-inset-top));
   right: 10px;
   z-index: 5;
+  display: flex;
+  align-items: center;
   min-height: 44px;
+  margin: 0;
   padding: 0 12px;
-  border: 0;
-  background: none;
   font-family: var(--font-title);
   font-weight: 500;
   font-size: 0.74rem;
   letter-spacing: 0.2em;
   text-transform: uppercase;
   color: var(--taupe);
-  transition: opacity 400ms var(--ease);
-}
-.intro__skip:hover {
-  color: var(--sepia);
+  pointer-events: none;
+  user-select: none;
 }
 
 .intro__top {
@@ -53,7 +53,7 @@ html:not(.intro-seen) body:has(.intro) {
     transform 700ms var(--ease);
 }
 .intro__names {
-  font-size: clamp(3rem, 12.5vw, 5.6rem);
+  font-size: calc(clamp(3rem, 12.5vw, 5.6rem) * var(--nomes-escala, 1));
   margin: 0;
   line-height: 1.1;
 }
@@ -271,9 +271,11 @@ html:not(.intro-seen) body:has(.intro) {
 .intro.is-opening .intro__flood {
   opacity: 1;
 }
+/* Das boas-vindas para o site: esmaece devagar (FADE_MS em CasaraoIntro). */
 .intro[data-phase='leaving'] {
   opacity: 0;
-  transition: opacity 560ms var(--ease);
+  pointer-events: none;
+  transition: opacity 2s cubic-bezier(0.4, 0, 0.6, 1);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -301,7 +303,7 @@ html:not(.intro-seen) body:has(.intro) {
     padding-top: 12px;
   }
   .intro__names {
-    font-size: 2.6rem;
+    font-size: calc(2.6rem * var(--nomes-escala, 1));
   }
   .intro__phrase {
     margin-bottom: 8px;

@@ -53,6 +53,8 @@ const SECTIONS: Section[] = [
       { name: 'buttonLabel', label: 'Texto do botão', type: 'text' },
       { name: 'welcomePhrase', label: 'Boas-vindas (visitante)', type: 'text' },
       { name: 'welcomePhraseGuest', label: 'Boas-vindas (convidado reconhecido)', type: 'text', span: true },
+      { name: 'namesSizeIntro', label: 'Tamanho do nome do casal na abertura (%)', type: 'number', help: '100 = tamanho original; de 50 a 150' },
+      { name: 'namesSizeHome', label: 'Tamanho do nome do casal no convite da página inicial (%)', type: 'number', help: '100 = tamanho original; de 50 a 150' },
       {
         name: 'musicMediaId',
         label: 'Música de fundo',
