@@ -115,6 +115,8 @@ export const rsvpSettingsSchema = z.object({
   askMessage: z.boolean().default(true),
   confirmedText: text('Que alegria! Mal podemos esperar para celebrar com você.', 500),
   declinedText: text('Sentiremos sua falta, mas agradecemos de coração por nos avisar.', 500),
+  /** Depois de responder, junto do botão "Ver presentes" (vazio = não mostra). */
+  giftsInvite: text('Se quiser nos presentear, preparamos uma lista com muito carinho.', 300),
   closedText: text(
     'O prazo para confirmar ou alterar a presença terminou. Se precisar de algo, fale diretamente com a gente.',
     500,

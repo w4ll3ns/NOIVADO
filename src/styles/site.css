@@ -586,8 +586,8 @@
   align-items: center;
   justify-content: center;
   gap: 2px;
-  width: 104px;
-  height: 104px;
+  width: 112px;
+  height: 112px;
   border-radius: 50%;
   border: 1px solid var(--seal);
   outline: 1px solid var(--seal);
@@ -597,10 +597,10 @@
   font-family: var(--font-title);
   font-weight: 500;
   font-size: 0.7rem;
-  letter-spacing: 0.16em;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
   line-height: 1.25;
-  padding: 10px;
+  padding: 8px;
   margin: 4px auto 14px;
 }
 .seal__mark {
@@ -2176,6 +2176,16 @@ a.gift:hover .gift__cta {
   color: var(--ink-soft);
   white-space: pre-line;
   font-size: var(--fs-lead);
+}
+/* Depois de responder à presença: convite para a lista de presentes. */
+.result__convite {
+  max-width: 26rem;
+  margin: 22px auto 0;
+  padding-top: 18px;
+  border-top: 1px dotted var(--line);
+  font-size: 1.12rem;
+  color: var(--sepia);
+  white-space: pre-line;
 }
 
 .dress__icon {

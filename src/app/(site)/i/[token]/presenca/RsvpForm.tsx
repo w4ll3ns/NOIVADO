@@ -14,7 +14,7 @@ type Props = {
   maxCompanions: number
   questions: { dietary: boolean; specialNeeds: boolean; notes: boolean; song: boolean; message: boolean }
   previous: { dietary: string; specialNeeds: string; notes: string; song: string }
-  texts: { intro: string; confirmed: string; declined: string }
+  texts: { intro: string; confirmed: string; declined: string; giftsInvite: string }
   preview: boolean
   giftsEnabled: boolean
 }
@@ -40,6 +40,7 @@ export function RsvpForm(props: Props) {
         </div>
         <p className="script">{yes ? 'Que alegria!' : 'Obrigado por avisar'}</p>
         <p className="result__text">{yes ? props.texts.confirmed : props.texts.declined}</p>
+        {props.giftsEnabled && props.texts.giftsInvite ? <p className="result__convite">{props.texts.giftsInvite}</p> : null}
         <div className="btn-row" style={{ marginTop: 28 }}>
           <Link href={`/i/${props.token}`} className="btn btn--primary">
             Voltar ao meu convite

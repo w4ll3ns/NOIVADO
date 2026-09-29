@@ -112,6 +112,13 @@ const SECTIONS: Section[] = [
       { name: 'askMessage', label: 'Mensagem aos noivos', type: 'checkbox' },
       { name: 'confirmedText', label: 'Texto após confirmar', type: 'textarea', rows: 2 },
       { name: 'declinedText', label: 'Texto após recusar', type: 'textarea', rows: 2 },
+      {
+        name: 'giftsInvite',
+        label: 'Convite para a lista de presentes (após responder)',
+        type: 'textarea',
+        rows: 2,
+        help: 'Aparece logo acima do botão “Ver presentes” quando o convidado responde. Deixe em branco para não mostrar.',
+      },
       { name: 'closedText', label: 'Texto após o prazo', type: 'textarea', rows: 2 },
     ],
   },

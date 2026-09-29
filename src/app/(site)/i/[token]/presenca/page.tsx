@@ -62,7 +62,7 @@ export default async function RsvpPage(props: PageProps<'/i/[token]/presenca'>) 
               notes: last?.notes ?? '',
               song: last?.songRequest ?? '',
             }}
-            texts={{ intro: r.intro, confirmed: r.confirmedText, declined: r.declinedText }}
+            texts={{ intro: r.intro, confirmed: r.confirmedText, declined: r.declinedText, giftsInvite: r.giftsInvite }}
           />
         ) : (
           <div className="result">
