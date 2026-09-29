@@ -45,6 +45,14 @@ const FADE_MS = 2000
 
 const useIsoLayoutEffect = typeof window === 'undefined' ? useEffect : useLayoutEffect
 
+/**
+ * Por trás da abertura a página pode estar rolada (o navegador restaura a posição ao recarregar,
+ * ou o link tinha #âncora): quem entra começa sempre no início.
+ */
+function irParaOInicio() {
+  window.scrollTo({ top: 0, left: 0, behavior: 'instant' })
+}
+
 /** Vista nesta visita: a classe some quando a página é recarregada ou o site é aberto de novo. */
 function markSeen() {
   document.documentElement.classList.add('intro-seen')
@@ -153,6 +161,7 @@ export function CasaraoIntro(props: Props) {
 
   const skip = useCallback(() => {
     tocarDaAbertura()
+    irParaOInicio()
     clearTimers()
     desenho.current?.cancel()
     setPhase('leaving')
@@ -171,6 +180,7 @@ export function CasaraoIntro(props: Props) {
   const enter = () => {
     if (phase === 'opening' || phase === 'welcome' || phase === 'leaving') return
     tocarDaAbertura()
+    irParaOInicio()
     desenho.current?.cancel()
     clearTimers()
     poeira.current?.revoada()

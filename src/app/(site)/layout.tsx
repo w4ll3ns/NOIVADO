@@ -24,7 +24,8 @@ export default async function SiteLayout({ children }: { children: React.ReactNo
       </a>
       <SiteHeader
         links={links}
-        ctaHref={guest ? `/i/${guest.token}/presenca` : '/confirmar'}
+        ctaHref="/#localizacao"
+        rsvpHref={guest ? `/i/${guest.token}/presenca` : '/confirmar'}
         ctaLabel={guest && guest.invitation.rsvpStatus !== 'pending' ? 'Minha presença' : 'Confirmar presença'}
         ctaShort={guest && guest.invitation.rsvpStatus !== 'pending' ? 'Presença' : 'Confirmar'}
         portalHref={guest ? `/i/${guest.token}` : null}

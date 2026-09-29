@@ -24,17 +24,20 @@ html:not(.intro-seen) body:has(.intro) {
   --light-y: 70%;
 }
 
-/* "Noivado" no canto de cima: só texto (onde ficava o "Pular abertura"). */
+/* "Noivado" centralizado no alto: só texto, sem efeito. */
 .intro__marca {
   position: absolute;
   top: max(10px, env(safe-area-inset-top));
-  right: 10px;
+  left: 0;
+  right: 0;
   z-index: 5;
   display: flex;
   align-items: center;
+  justify-content: center;
   min-height: 44px;
   margin: 0;
-  padding: 0 12px;
+  /* compensa o espaçamento depois da última letra, para ficar no centro de verdade */
+  padding: 0 0 0 0.2em;
   font-family: var(--font-title);
   font-weight: 500;
   font-size: 0.74rem;

@@ -2,21 +2,38 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type MouseEvent } from 'react'
 import { createPortal } from 'react-dom'
 import { Crest } from '@/components/ornaments/Ornaments'
 
 export type NavLink = { href: string; label: string }
 
+/**
+ * Já na página da âncora (ex.: "/#localizacao" estando na home): rola suavemente até a seção,
+ * mesmo que o endereço já tenha essa âncora. Em outra página, o link navega normalmente.
+ */
+function rolarAte(e: MouseEvent<HTMLAnchorElement>, href: string) {
+  const [path, id] = href.split('#')
+  if (!id || window.location.pathname !== (path || '/')) return
+  const alvo = document.getElementById(id)
+  if (!alvo) return
+  e.preventDefault()
+  alvo.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  if (window.location.hash !== `#${id}`) history.replaceState(history.state, '', `#${id}`)
+}
+
 type Props = {
   links: NavLink[]
+  /** Botão fixo do cabeçalho: leva à seção Informações (onde está o "Confirmar presença"). */
   ctaHref: string
+  /** Botão do menu aberto: vai direto para a confirmação. */
+  rsvpHref: string
   ctaLabel: string
   ctaShort: string
   portalHref?: string | null
 }
 
-export function SiteHeader({ links, ctaHref, ctaLabel, ctaShort, portalHref }: Props) {
+export function SiteHeader({ links, ctaHref, rsvpHref, ctaLabel, ctaShort, portalHref }: Props) {
   const [open, setOpen] = useState(false)
   const pathname = usePathname()
   const toggleRef = useRef<HTMLButtonElement>(null)
@@ -81,7 +98,12 @@ export function SiteHeader({ links, ctaHref, ctaLabel, ctaShort, portalHref }: P
             </Link>
           ))}
         </nav>
-        <Link href={ctaHref} className="btn btn--primary btn--small header-cta" aria-label={ctaLabel}>
+        <Link
+          href={ctaHref}
+          className="btn btn--primary btn--small header-cta"
+          aria-label={ctaLabel}
+          onClick={(e) => rolarAte(e, ctaHref)}
+        >
           <span className="header-cta__long">{ctaLabel}</span>
           <span className="header-cta__short" aria-hidden="true">
             {ctaShort}
@@ -113,7 +135,7 @@ export function SiteHeader({ links, ctaHref, ctaLabel, ctaShort, portalHref }: P
                   ))}
                 </ul>
               </nav>
-              <Link href={ctaHref} className="btn btn--primary btn--block" onClick={() => setOpen(false)}>
+              <Link href={rsvpHref} className="btn btn--primary btn--block" onClick={() => setOpen(false)}>
                 {ctaLabel}
               </Link>
             </div>,
