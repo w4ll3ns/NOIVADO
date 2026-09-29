@@ -91,7 +91,12 @@ export const dressCodeSettingsSchema = z.object({
     'As ruas do Centro Histórico são de pedra: prefira saltos grossos ou sapatos confortáveis.',
     1500,
   ),
+  /** Imagens do traje: aparecem grandes na página /traje. */
   referenceMediaIds: z.array(z.string().uuid()).max(12).default([]),
+  /** O que mais aparece na página /traje (tudo opcional). */
+  showType: z.boolean().default(false),
+  showColors: z.boolean().default(false),
+  showRecommendations: z.boolean().default(false),
 })
 
 export const rsvpSettingsSchema = z.object({

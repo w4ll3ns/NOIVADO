@@ -23,7 +23,7 @@ function ColorsEditor({ name, initial }: { name: string; initial: Color[] }) {
         <div key={i} style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
           <input type="color" value={c.hex} onChange={(e) => setList((l) => l.map((x, j) => (j === i ? { ...x, hex: e.target.value } : x)))} aria-label="Cor" />
           <input className="a-input" value={c.name} placeholder="Nome da cor" onChange={(e) => setList((l) => l.map((x, j) => (j === i ? { ...x, name: e.target.value } : x)))} />
-          <button type="button" className="a-btn a-btn--sm a-btn--danger" onClick={() => setList((l) => l.filter((_, j) => j !== i))}>
+          <button type="button" className="a-btn a-btn--sm a-btn--danger" aria-label="Remover cor" onClick={() => setList((l) => l.filter((_, j) => j !== i))}>
             ✕
           </button>
         </div>
@@ -38,6 +38,7 @@ function ColorsEditor({ name, initial }: { name: string; initial: Color[] }) {
 function MediaListEditor({ name, initial }: { name: string; initial: string[] }) {
   const [ids, setIds] = useState<string[]>(initial)
   const [busy, setBusy] = useState(false)
+  const [erro, setErro] = useState('')
   return (
     <div>
       <input type="hidden" name={name} value={JSON.stringify(ids)} />
@@ -46,14 +47,20 @@ function MediaListEditor({ name, initial }: { name: string; initial: string[] })
           <span key={id} style={{ position: 'relative' }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={`/m/${id}/thumb`} alt="" style={{ width: 72, height: 90, objectFit: 'cover', borderRadius: 4 }} />
-            <button type="button" className="a-btn a-btn--sm" style={{ position: 'absolute', top: 2, right: 2, minHeight: 24, padding: '0 6px' }} onClick={() => setIds((l) => l.filter((x) => x !== id))}>
+            <button
+              type="button"
+              className="a-btn a-btn--sm"
+              aria-label="Remover imagem"
+              style={{ position: 'absolute', top: 2, right: 2, minHeight: 24, padding: '0 6px' }}
+              onClick={() => setIds((l) => l.filter((x) => x !== id))}
+            >
               ✕
             </button>
           </span>
         ))}
       </div>
       <label className="a-btn a-btn--sm">
-        {busy ? 'Enviando…' : '+ Imagens de referência'}
+        {busy ? 'Enviando…' : '+ Enviar imagens'}
         <input
           type="file"
           accept="image/*"
@@ -63,6 +70,7 @@ function MediaListEditor({ name, initial }: { name: string; initial: string[] })
             const files = Array.from(e.target.files ?? [])
             e.target.value = ''
             setBusy(true)
+            setErro('')
             for (const f of files) {
               const fd = new FormData()
               fd.append('file', f)
@@ -71,13 +79,17 @@ function MediaListEditor({ name, initial }: { name: string; initial: string[] })
               if (res?.ok) {
                 const { id } = (await res.json()) as { id: string }
                 setIds((l) => [...l, id])
+              } else {
+                const msg = res ? ((await res.json().catch(() => null)) as { error?: string } | null)?.error : null
+                setErro(`Não foi possível enviar “${f.name}”${msg ? `: ${msg.replace(/\.$/, '')}` : ''}.`)
               }
             }
             setBusy(false)
           }}
         />
       </label>
-      <p className="a-help">Lembre-se de salvar depois de enviar.</p>
+      {erro ? <p className="a-alert a-alert--bad">{erro}</p> : null}
+      <p className="a-help">Lembre-se de salvar depois de enviar. O ✕ tira a imagem.</p>
     </div>
   )
 }
@@ -97,8 +109,11 @@ export function SettingsForm({ action, fields, values, readOnly }: { action: (p:
                   <input type="checkbox" name={f.name} defaultChecked={!!v} /> {f.label}
                 </label>
               )
+            // Listas (cores, imagens) têm vários controles: num <label>, clicar no nome ou na foto
+            // acionaria o primeiro deles (o ✕ da 1ª imagem).
+            const Field = f.type === 'colors' || f.type === 'media' ? 'div' : 'label'
             return (
-              <label key={f.name} className={`a-field${f.span || f.type === 'textarea' || f.type === 'colors' || f.type === 'media' ? ' span-2' : ''}`}>
+              <Field key={f.name} className={`a-field${f.span || f.type === 'textarea' || f.type === 'colors' || f.type === 'media' ? ' span-2' : ''}`}>
                 <span>{f.label}</span>
                 {f.type === 'textarea' ? (
                   <textarea className="a-textarea" name={f.name} rows={f.rows ?? 3} defaultValue={String(v ?? '')} />
@@ -110,7 +125,7 @@ export function SettingsForm({ action, fields, values, readOnly }: { action: (p:
                   <input className="a-input" type={f.type} name={f.name} defaultValue={String(v ?? '')} />
                 )}
                 {f.help ? <small className="a-help">{f.help}</small> : null}
-              </label>
+              </Field>
             )
           })}
         </div>

@@ -1144,16 +1144,27 @@ html:has(.local-modal[open]) {
   text-transform: uppercase;
   color: var(--taupe);
 }
-.dress__refs {
+/* Imagens do traje: grandes, uma embaixo da outra, com o filete duplo das molduras. */
+.dress__imagens {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
-  margin-top: 28px;
+  gap: clamp(20px, 5vw, 32px);
+  max-width: 640px;
+  margin: clamp(26px, 6vw, 40px) auto 0;
 }
-.dress__refs img {
-  aspect-ratio: 3 / 4;
-  object-fit: cover;
-  border: 1px solid var(--line-soft);
+.dress__imagem {
+  margin: 0;
+  padding: 9px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--ivory);
+  box-shadow:
+    inset 0 0 0 4px var(--ivory),
+    inset 0 0 0 5px var(--line-soft);
+}
+.dress__imagem img {
+  display: block;
+  width: 100%;
+  height: auto;
 }
 
 /* =========================================================
