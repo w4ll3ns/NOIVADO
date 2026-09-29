@@ -13,10 +13,10 @@ import {
   loadInvitationGifts,
   loadInvitationMessages,
 } from '@/lib/invitations'
-import { getAlbumEntryToken, getMainAlbum } from '@/lib/content'
+import { getAlbumEntryToken, getFirstMoment, getMainAlbum } from '@/lib/content'
 import { albumUploadState } from '@/lib/album-state'
-import { endOfDayInTz, formatBRL, formatDate, formatDateDots, formatDateLong, formatTime, fullName, weekdayOf } from '@/lib/format'
-import { googleMapsUrl, wazeUrl } from '@/lib/event'
+import { endOfDayInTz, formatBRL, formatDate, formatDateDots, formatDateLong, fullName, weekdayOf } from '@/lib/format'
+import { eventTime, googleMapsUrl, wazeUrl } from '@/lib/event'
 import { InvalidInvite } from './InvalidInvite'
 
 export const metadata: Metadata = {
@@ -32,12 +32,14 @@ export default async function PortalPage(props: PageProps<'/i/[token]'>) {
 
   const inv = found.invitation
   const preview = sp.preview === '1' && !!(await getAdmin())
-  const [guests, gifts, messages, album] = await Promise.all([
+  const [guests, gifts, messages, album, first] = await Promise.all([
     listGuests(inv.id),
     loadInvitationGifts(inv.id),
     loadInvitationMessages(inv.id),
     getMainAlbum(),
+    getFirstMoment(),
   ])
+  const horario = eventTime(settings.event, first)
   const albumToken = album ? await getAlbumEntryToken(album.id) : null
   const albumState = album ? albumUploadState(album) : 'draft'
 
@@ -257,7 +259,7 @@ export default async function PortalPage(props: PageProps<'/i/[token]'>) {
               <div>
                 <dt>Horário</dt>
                 <dd>
-                  {e.receptionTime ? `Recepção às ${formatTime(e.receptionTime)}` : formatTime(e.mainTime)}
+                  {horario.label} às {horario.time}
                 </dd>
               </div>
               <div>

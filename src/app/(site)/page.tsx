@@ -40,7 +40,7 @@ export default async function HomePage(props: PageProps<'/'>) {
       <DressCodeSection settings={settings} />
       <GiftsTeaser settings={settings} />
       <GalleryTeaser approved={approved} publicEnabled={!!album?.publicGalleryEnabled} />
-      <FaqSection settings={settings} faqs={faqs} />
+      <FaqSection settings={settings} faqs={faqs} first={schedule[0]} />
       <GuestbookTeaser settings={settings} />
     </>
   )

@@ -1,5 +1,6 @@
 import type { Settings } from '@/lib/settings-schema'
-import { formatDateLong, formatTime } from '@/lib/format'
+import { formatDateLong } from '@/lib/format'
+import { eventTime, type Moment } from '@/lib/event'
 
 export const TEMPLATE_VARS = [
   'NOME_CONVIDADO',
@@ -31,12 +32,12 @@ export function unknownVariables(body: string): string[] {
   return [...found]
 }
 
-export function eventTemplateValues(settings: Pick<Settings, 'event' | 'rsvp'>): TemplateValues {
+export function eventTemplateValues(settings: Pick<Settings, 'event' | 'rsvp'>, first?: Moment | null): TemplateValues {
   const e = settings.event
   return {
     NOME_CASAL: e.coupleNames,
     DATA_EVENTO: formatDateLong(e.date),
-    HORARIO_EVENTO: formatTime(e.receptionTime || e.mainTime),
+    HORARIO_EVENTO: eventTime(e, first).time,
     LOCAL_EVENTO: e.venueName,
     ENDERECO_EVENTO: e.address,
     PRAZO_RSVP: settings.rsvp.deadline ? formatDateLong(settings.rsvp.deadline) : 'a data combinada',

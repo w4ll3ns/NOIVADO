@@ -2,8 +2,8 @@ import { CompassRose, Rule } from '@/components/ornaments/Ornaments'
 import { EngravedIcon } from '@/components/ornaments/EngravedIcon'
 import { SectionHead } from '@/components/site/SectionHead'
 import type { Settings } from '@/lib/settings-schema'
-import { formatDateLong, formatTime, weekdayOf } from '@/lib/format'
-import { googleMapsUrl, wazeUrl } from '@/lib/event'
+import { formatDateLong, weekdayOf } from '@/lib/format'
+import { eventTime, googleMapsUrl, wazeUrl } from '@/lib/event'
 import { mediaUrl } from '@/lib/media'
 
 type ScheduleItem = { id: string; timeLabel: string; title: string; description: string | null; iconMediaId: string | null }
@@ -18,6 +18,7 @@ export function EventDetails({ settings, schedule }: { settings: Settings; sched
     { title: 'Recomendações', text: e.recommendations },
   ].filter((g) => g.text.trim())
   const withIcons = schedule.some((s) => s.iconMediaId)
+  const horario = eventTime(e, schedule[0])
   return (
     <section id="noivado" className="section section--cream">
       <div className="container">
@@ -32,10 +33,8 @@ export function EventDetails({ settings, schedule }: { settings: Settings; sched
           <div className="detail">
             <EngravedIcon name="relogio" />
             <div className="detail__label">Horário</div>
-            <div className="detail__value">{formatTime(e.receptionTime || e.mainTime)}</div>
-            <div className="detail__hint">
-              {e.receptionTime ? 'Recepção dos convidados' : 'Início da celebração'}
-            </div>
+            <div className="detail__value">{horario.time}</div>
+            <div className="detail__hint">{horario.label}</div>
           </div>
           <div className="detail">
             <EngravedIcon name="casa" />

@@ -27,6 +27,20 @@ export function eventLabels(event: EventSettings) {
   }
 }
 
+export type Moment = { timeLabel: string; title: string }
+
+/**
+ * O horário do evento: o do primeiro momento da programação; sem programação, o horário de
+ * recepção (ou o principal) de Configurações → Evento.
+ */
+export function eventTime(event: EventSettings, first?: Moment | null) {
+  if (first?.timeLabel) return { time: first.timeLabel, label: first.title }
+  return {
+    time: formatTime(event.receptionTime || event.mainTime),
+    label: event.receptionTime ? 'Recepção dos convidados' : 'Início da celebração',
+  }
+}
+
 /** Separa "Maby & Chris" em partes para a caligrafia ("Maby", "&", "Chris"). */
 export function coupleParts(names: string): { a: string; joiner: string; b: string } | null {
   const m = /^(.+?)\s+(&|e|and)\s+(.+)$/i.exec(names.trim())

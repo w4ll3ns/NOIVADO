@@ -5,6 +5,7 @@ import { greetingFor, invitationUrl } from '@/lib/invitations'
 import { invitationFilterSql } from './invitation-filters'
 import { getSettings } from '@/lib/settings'
 import { eventTemplateValues } from '@/lib/templates'
+import { getFirstMoment } from '@/lib/content'
 import type { WaInvitation, WaTemplate } from '@/components/admin/WhatsAppDialog'
 
 export async function loadInvitationRows(opts: { filter?: string; q?: string; archived?: boolean } = {}) {
@@ -82,12 +83,13 @@ export function toWaInvitation(r: InvitationRow): WaInvitation {
 }
 
 export async function whatsappContext(): Promise<{ templates: WaTemplate[]; eventValues: ReturnType<typeof eventTemplateValues> }> {
-  const [templates, settings] = await Promise.all([
+  const [templates, settings, first] = await Promise.all([
     db.select().from(schema.whatsappTemplates).orderBy(asc(schema.whatsappTemplates.kind), asc(schema.whatsappTemplates.name)),
     getSettings(),
+    getFirstMoment(),
   ])
   return {
     templates: templates.map((t) => ({ id: t.id, name: t.name, kind: t.kind, body: t.body, isDefault: t.isDefault })),
-    eventValues: eventTemplateValues(settings),
+    eventValues: eventTemplateValues(settings, first),
   }
 }

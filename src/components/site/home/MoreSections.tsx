@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { SectionHead } from '@/components/site/SectionHead'
 import { EngravedIcon } from '@/components/ornaments/EngravedIcon'
 import type { Settings } from '@/lib/settings-schema'
+import type { Moment } from '@/lib/event'
 import { eventTemplateValues, renderTemplate } from '@/lib/templates'
 
 export function GiftsTeaser({ settings }: { settings: Settings }) {
@@ -47,9 +48,9 @@ export function GalleryTeaser({ approved, publicEnabled }: { approved: number; p
   )
 }
 
-export function FaqSection({ settings, faqs }: { settings: Settings; faqs: { id: string; question: string; answer: string }[] }) {
+export function FaqSection({ settings, faqs, first }: { settings: Settings; faqs: { id: string; question: string; answer: string }[]; first?: Moment | null }) {
   if (!faqs.length) return null
-  const values = eventTemplateValues(settings)
+  const values = eventTemplateValues(settings, first)
   return (
     <section id="duvidas" className="section">
       <div className="container">

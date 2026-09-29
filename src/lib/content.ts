@@ -10,6 +10,17 @@ export async function getSchedule() {
     .orderBy(asc(schema.scheduleItems.sortOrder), asc(schema.scheduleItems.createdAt))
 }
 
+/** O primeiro momento da programação: é "o horário do evento" em todo o site e nas mensagens. */
+export async function getFirstMoment(): Promise<{ timeLabel: string; title: string } | null> {
+  const [row] = await db
+    .select({ timeLabel: schema.scheduleItems.timeLabel, title: schema.scheduleItems.title })
+    .from(schema.scheduleItems)
+    .where(eq(schema.scheduleItems.isActive, true))
+    .orderBy(asc(schema.scheduleItems.sortOrder), asc(schema.scheduleItems.createdAt))
+    .limit(1)
+  return row ?? null
+}
+
 export async function getFaqs() {
   return db
     .select()

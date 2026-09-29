@@ -707,7 +707,7 @@
 
 /* ---- Programação: linha do tempo (ícone | losango na linha | horário e momento) ---- */
 .programme-block {
-  margin: clamp(48px, 9vw, 80px) auto 0;
+  margin: clamp(88px, 20vw, 150px) auto 0;
   text-align: center;
 }
 .programme__heading {
