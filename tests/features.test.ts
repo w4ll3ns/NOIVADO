@@ -116,3 +116,28 @@ describe('Range da música de fundo', () => {
     expect(parseRange('bytes=0-1,5-9', 1000)).toBeNull()
   })
 })
+
+describe('pedido com vários presentes no Mercado Pago', () => {
+  it('um item por presente, com a referência do pedido', async () => {
+    const { buildPreferenceBody } = await import('@/lib/payments/mercadopago')
+    const body = buildPreferenceBody({
+      externalReference: 'pedido-1',
+      items: [
+        { id: 'a', title: 'Presente: Jantar', amountCents: 35000 },
+        { id: 'b', title: 'Presente: Café', description: 'Para a casa', amountCents: 18050 },
+      ],
+      payer: { name: 'Ana Maria Souza', email: 'ana@example.com' },
+      appUrl: 'https://maby-chris.example',
+      maxInstallments: 12,
+      expiresAt: new Date('2026-10-01T00:00:00Z'),
+    })
+    expect(body.items.map((i) => [i.id, i.unit_price, i.quantity])).toEqual([
+      ['a', 350, 1],
+      ['b', 180.5, 1],
+    ])
+    expect(body.items[1].description).toBe('Para a casa')
+    expect(body.external_reference).toBe('pedido-1')
+    expect(body.back_urls.success).toBe('https://maby-chris.example/presentes/retorno?ref=pedido-1')
+    expect(body.payer).toMatchObject({ name: 'Ana', surname: 'Maria Souza' })
+  })
+})

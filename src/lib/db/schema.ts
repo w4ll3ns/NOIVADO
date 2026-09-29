@@ -376,8 +376,13 @@ export type PaymentStatus = (typeof PAYMENT_STATUSES)[number]
 export const giftPayments = pgTable(
   'gift_payments',
   {
-    /** Também é o `external_reference` enviado ao Mercado Pago. */
+    /** Nos pagamentos antigos (um presente por vez), é o `external_reference` enviado ao Mercado Pago. */
     id: id(),
+    /**
+     * Pedido: vários presentes pagos juntos, uma linha por presente. É o `external_reference`
+     * dos pagamentos novos (null nos antigos).
+     */
+    orderId: uuid('order_id'),
     giftId: uuid('gift_id')
       .notNull()
       .references(() => gifts.id, { onDelete: 'restrict' }),
@@ -406,6 +411,7 @@ export const giftPayments = pgTable(
     index('gift_payments_gift_idx').on(t.giftId, t.status),
     index('gift_payments_invitation_idx').on(t.invitationId),
     index('gift_payments_mp_payment_idx').on(t.mpPaymentId),
+    index('gift_payments_order_idx').on(t.orderId),
   ],
 )
 

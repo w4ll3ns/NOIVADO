@@ -2315,3 +2315,289 @@ body:has(.musica) .site-footer {
     display: none;
   }
 }
+
+/* =========================================================
+   Presentes: escolher vários e finalizar de uma vez
+   ========================================================= */
+.gift-como {
+  margin: 14px auto 0;
+  max-width: 34rem;
+  font-style: italic;
+  color: var(--ink-soft);
+}
+.gift-como strong {
+  font-style: normal;
+  font-weight: 500;
+  color: var(--sepia);
+}
+/* Botão "Escolher" do cartão; escolhido fica preenchido com um ✓. */
+.gift__escolher {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-width: 150px;
+  min-height: 44px;
+  margin-top: 10px;
+  padding: 0 20px;
+  border: 1px solid var(--sepia);
+  border-radius: var(--radius);
+  background: transparent;
+  font-family: var(--font-title);
+  font-weight: 500;
+  font-size: 0.8rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--sepia);
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  transition:
+    background-color var(--dur) var(--ease),
+    color var(--dur) var(--ease);
+}
+.gift__escolher:hover {
+  background: rgba(124, 104, 85, 0.07);
+}
+.gift__escolher.is-on {
+  background: var(--sepia);
+  color: var(--ivory);
+  box-shadow:
+    inset 0 0 0 3px var(--sepia),
+    inset 0 0 0 4px rgba(252, 247, 242, 0.5);
+}
+.gift__escolher svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.gift:has(.gift__escolher.is-on) {
+  border-color: var(--sepia);
+  outline-color: var(--line);
+}
+.gift-detail__escolha .gift__escolher {
+  min-width: 220px;
+  min-height: 52px;
+}
+
+/* Barra fixa: quantos presentes, total e "Finalizar presentes" */
+.sacola-barra {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 46;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 12px max(var(--gutter), env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(var(--gutter), env(safe-area-inset-left));
+  background: rgba(248, 237, 229, 0.96);
+  border-top: 1px solid var(--line);
+  box-shadow: 0 -8px 24px rgba(60, 45, 30, 0.08);
+  animation: sacola-sobe 320ms var(--ease) both;
+}
+@supports (backdrop-filter: blur(4px)) {
+  .sacola-barra {
+    background: rgba(248, 237, 229, 0.88);
+    backdrop-filter: blur(8px);
+  }
+}
+@keyframes sacola-sobe {
+  from {
+    transform: translateY(100%);
+  }
+}
+.sacola-barra__info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.25;
+}
+.sacola-barra__qtd {
+  font-family: var(--font-title);
+  font-weight: 500;
+  font-size: 0.72rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--taupe);
+}
+.sacola-barra__total {
+  font-family: var(--font-title);
+  font-size: 1.25rem;
+  font-weight: 500;
+  color: var(--sepia-deep);
+}
+.sacola-barra__livre {
+  font-size: 0.95rem;
+  font-style: italic;
+  color: var(--ink-soft);
+}
+.sacola-barra__btn {
+  flex: none;
+  min-height: 48px;
+  padding: 0 18px;
+  font-size: 0.8rem;
+  letter-spacing: 0.16em;
+}
+@media (min-width: 760px) {
+  .sacola-barra {
+    justify-content: center;
+    gap: 40px;
+  }
+  .sacola-barra__btn {
+    padding: 0 28px;
+  }
+}
+/* Com a barra na tela: o botão ♪ sobe e o fim da página não fica escondido. */
+body:has(.sacola-barra) .musica {
+  bottom: calc(max(12px, env(safe-area-inset-bottom)) + 84px);
+}
+body:has(.sacola-barra) .site-footer {
+  padding-bottom: calc(max(84px, env(safe-area-inset-bottom) + 76px) + 72px);
+}
+
+/* Página "Seus presentes" */
+.sacola-lista {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border-top: 1px solid var(--line);
+}
+.sacola-item {
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr) 44px;
+  align-items: start;
+  gap: 14px;
+  padding: 16px 0;
+  border-bottom: 1px solid var(--line-soft);
+}
+.sacola-item__img {
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  border: 1px solid var(--line-soft);
+  background: var(--ivory);
+}
+.sacola-item__img img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.sacola-item__img .ei {
+  width: 38px;
+  height: 38px;
+}
+.sacola-item__nome {
+  margin: 0;
+  font-family: var(--font-title);
+  font-size: 1.2rem;
+  font-weight: 500;
+  line-height: 1.25;
+  color: var(--ink);
+}
+.sacola-item__valor {
+  margin: 4px 0 0;
+  font-family: var(--font-title);
+  font-size: 1.1rem;
+  color: var(--sepia);
+}
+.sacola-item__tirar {
+  width: 44px;
+  height: 44px;
+  border: 0;
+  background: none;
+  font-size: 1.6rem;
+  line-height: 1;
+  color: var(--taupe);
+}
+.sacola-item__tirar:hover {
+  color: var(--sepia-deep);
+}
+.sacola-livre {
+  display: grid;
+  gap: 8px;
+  margin-top: 8px;
+}
+.quick-amounts--pequeno {
+  justify-content: flex-start;
+  gap: 6px;
+}
+.quick-amounts--pequeno button {
+  min-height: 40px;
+  min-width: 0;
+  padding: 0 12px;
+  font-size: 1rem;
+}
+.sacola-livre__campo {
+  position: relative;
+  display: block;
+  max-width: 220px;
+}
+.sacola-livre__campo span {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-family: var(--font-title);
+  font-size: 1.1rem;
+  color: var(--taupe);
+}
+.sacola-livre__campo .input--money {
+  padding-left: 46px;
+  font-size: 1.3rem;
+  text-align: left;
+}
+.sacola-livre__erro {
+  color: #6f3b2f;
+}
+.sacola-total {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 18px 0 6px;
+  font-family: var(--font-title);
+}
+.sacola-total span {
+  font-size: 0.8rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--taupe);
+}
+.sacola-total strong {
+  font-size: 1.6rem;
+  font-weight: 500;
+  color: var(--sepia-deep);
+}
+
+/* Resumo do pedido na página de retorno */
+.pedido-resumo {
+  list-style: none;
+  max-width: 420px;
+  margin: 20px auto 0;
+  padding: 0;
+  text-align: left;
+}
+.pedido-resumo li {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 16px;
+  padding: 8px 0;
+  border-bottom: 1px dotted var(--line);
+  color: var(--ink-soft);
+}
+.pedido-resumo li span:last-child {
+  flex: none;
+  white-space: nowrap;
+}
+.pedido-resumo li.pedido-resumo__total {
+  font-family: var(--font-title);
+  font-weight: 500;
+  color: var(--sepia-deep);
+  border-bottom: 0;
+}

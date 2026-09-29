@@ -1,5 +1,6 @@
 import 'server-only'
 import { and, asc, eq, inArray, isNull, sql } from 'drizzle-orm'
+import { cookies } from 'next/headers'
 import { db, schema, type Tx } from '@/lib/db'
 import { formatBRL } from '@/lib/format'
 
@@ -11,8 +12,20 @@ export const RESERVATION_MINUTES = 30
 
 export type GiftAvailabilityInfo = { available: boolean; remaining: number | null; given: number }
 
-/** Quantos presentes já foram dados (aprovados) e quantos estão reservados, por presente. */
-export async function giftCounts(giftIds?: string[], executor: Tx | typeof db = db) {
+/** Cookie com o último pedido deste navegador (trocado se ele finalizar de novo sem ter pago). */
+export const ORDER_COOKIE = 'mc_pedido'
+
+/** O pedido deste navegador ainda sem tentativa de pagamento não reserva presentes para ele mesmo. */
+export async function ownPendingOrder() {
+  const v = (await cookies()).get(ORDER_COOKIE)?.value
+  return v && /^[0-9a-f-]{36}$/i.test(v) ? v : null
+}
+
+/**
+ * Quantos presentes já foram dados (aprovados) e quantos estão reservados, por presente.
+ * `ignoreOrderId`: não conta a reserva desse pedido enquanto ele não tiver tentativa de pagamento.
+ */
+export async function giftCounts(giftIds?: string[], executor: Tx | typeof db = db, ignoreOrderId: string | null = null) {
   const rows = await executor
     .select({
       giftId: schema.giftPayments.giftId,
@@ -20,7 +33,8 @@ export async function giftCounts(giftIds?: string[], executor: Tx | typeof db = 
       reserved: sql<number>`count(*) filter (where ${schema.giftPayments.status} = 'awaiting'
         and (${schema.giftPayments.expiresAt} is null or ${schema.giftPayments.expiresAt} > now())
         and (${schema.giftPayments.mpPaymentId} is not null
-             or ${schema.giftPayments.createdAt} > now() - make_interval(mins => ${RESERVATION_MINUTES})))`,
+             or ${schema.giftPayments.createdAt} > now() - make_interval(mins => ${RESERVATION_MINUTES}))
+        ${ignoreOrderId ? sql`and (${schema.giftPayments.mpPaymentId} is not null or ${schema.giftPayments.orderId} is distinct from ${ignoreOrderId}::uuid)` : sql``})`,
     })
     .from(schema.giftPayments)
     .where(giftIds?.length ? inArray(schema.giftPayments.giftId, giftIds) : undefined)
@@ -50,7 +64,11 @@ export async function listPublicGifts() {
       .where(and(eq(schema.gifts.isActive, true), isNull(schema.gifts.archivedAt)))
       .orderBy(asc(schema.gifts.sortOrder), asc(schema.gifts.name)),
   ])
-  const counts = await giftCounts(gifts.map((g) => g.id))
+  const counts = await giftCounts(
+    gifts.map((g) => g.id),
+    db,
+    await ownPendingOrder(),
+  )
   const withAvail = gifts.map((g) => ({ ...g, avail: availabilityOf(g, counts.get(g.id)) }))
   const grouped = categories
     .map((c) => ({ category: c, gifts: withAvail.filter((g) => g.categoryId === c.id) }))
@@ -72,8 +90,25 @@ export async function getPublicGift(id: string) {
     .from(schema.gifts)
     .where(and(eq(schema.gifts.id, id), eq(schema.gifts.isActive, true), isNull(schema.gifts.archivedAt)))
   if (!gift) return null
-  const counts = await giftCounts([gift.id])
+  const counts = await giftCounts([gift.id], db, await ownPendingOrder())
   return { ...gift, avail: availabilityOf(gift, counts.get(gift.id)) }
+}
+
+/** Vários presentes públicos de uma vez (com disponibilidade), na ordem dos ids pedidos. */
+export async function getPublicGifts(ids: string[]) {
+  const valid = [...new Set(ids.filter((id) => /^[0-9a-f-]{36}$/i.test(id)))]
+  if (!valid.length) return []
+  const rows = await db
+    .select()
+    .from(schema.gifts)
+    .where(and(inArray(schema.gifts.id, valid), eq(schema.gifts.isActive, true), isNull(schema.gifts.archivedAt)))
+  const counts = await giftCounts(
+    rows.map((g) => g.id),
+    db,
+    await ownPendingOrder(),
+  )
+  const byId = new Map(rows.map((g) => [g.id, { ...g, avail: availabilityOf(g, counts.get(g.id)) }]))
+  return valid.map((id) => byId.get(id)).filter((g) => !!g)
 }
 
 /** Valida o valor informado. Retorna mensagem de erro (ou null) e o valor final em centavos. */

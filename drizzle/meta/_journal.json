@@ -15,6 +15,13 @@
       "when": 1790647567722,
       "tag": "0001_programacao_icone",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1790658429565,
+      "tag": "0002_presentes_pedido",
+      "breakpoints": true
     }
   ]
 }

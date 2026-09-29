@@ -53,11 +53,12 @@ async function mpFetch<T>(accessToken: string, path: string, init: RequestInit =
   return (await res.json()) as T
 }
 
+export type PreferenceItem = { id: string; title: string; description?: string | null; amountCents: number }
+
 export type PreferenceInput = {
+  /** O pedido (vários presentes pagos juntos). */
   externalReference: string
-  title: string
-  description?: string | null
-  amountCents: number
+  items: PreferenceItem[]
   payer: { name: string; email: string }
   appUrl: string
   maxInstallments: number
@@ -70,20 +71,18 @@ export function buildPreferenceBody(input: PreferenceInput) {
   const back = `${input.appUrl}/presentes/retorno?ref=${input.externalReference}`
   const [firstName, ...rest] = input.payer.name.trim().split(/\s+/)
   return {
-    items: [
-      {
-        id: input.externalReference,
-        title: input.title.slice(0, 250),
-        description: (input.description ?? input.title).slice(0, 250),
-        quantity: 1,
-        currency_id: 'BRL',
-        unit_price: Math.round(input.amountCents) / 100,
-        category_id: 'others',
-      },
-    ],
+    items: input.items.map((it) => ({
+      id: it.id,
+      title: it.title.slice(0, 250),
+      description: (it.description || it.title).slice(0, 250),
+      quantity: 1,
+      currency_id: 'BRL',
+      unit_price: Math.round(it.amountCents) / 100,
+      category_id: 'others',
+    })),
     payer: { name: firstName, surname: rest.join(' ') || undefined, email: input.payer.email },
     external_reference: input.externalReference,
-    metadata: { gift_payment_id: input.externalReference },
+    metadata: { gift_order_id: input.externalReference },
     back_urls: { success: back, pending: back, failure: back },
     ...(https
       ? {

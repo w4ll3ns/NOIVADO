@@ -3,21 +3,19 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { Divider, FrameCorners } from '@/components/ornaments/Ornaments'
 import { EngravedIcon } from '@/components/ornaments/EngravedIcon'
+import { EscolherPresente } from '@/components/gifts/EscolherPresente'
+import { SacolaBarra } from '@/components/gifts/SacolaBarra'
 import { getSettings } from '@/lib/settings'
-import { getCurrentGuest } from '@/lib/invitations'
 import { getPublicGift } from '@/lib/gifts'
-import { formatBRL, formatPhone, fullName } from '@/lib/format'
+import { formatBRL } from '@/lib/format'
 import { mediaUrl } from '@/lib/media'
-import { GiftForm } from './GiftForm'
-import { giveGiftAction } from './actions'
 
 export const metadata: Metadata = { title: 'Presentear' }
 
 export default async function GiftPage(props: PageProps<'/presentes/[id]'>) {
   const { id } = await props.params
-  const [settings, gift, guest] = await Promise.all([getSettings(), getPublicGift(id), getCurrentGuest()])
+  const [settings, gift] = await Promise.all([getSettings(), getPublicGift(id)])
   if (!settings.gifts.enabled || !gift) notFound()
-  const first = guest?.guests.find((g) => !g.isCompanion)
   const custom = gift.priceType === 'custom'
 
   return (
@@ -40,23 +38,20 @@ export default async function GiftPage(props: PageProps<'/presentes/[id]'>) {
         {!custom ? <p className="gift-detail__value">{formatBRL(gift.amountCents)}</p> : null}
       </header>
 
-      <div className="paper paper--ornate">
+      <div className="paper paper--ornate center">
         <FrameCorners />
         {gift.avail.available ? (
-          <GiftForm
-            action={giveGiftAction.bind(null, gift.id)}
-            custom={custom}
-            quickAmounts={gift.quickAmountsCents ?? []}
-            suggestedCents={gift.suggestedCents}
-            minCents={gift.minCents}
-            maxCents={gift.maxCents}
-            coupleNames={settings.event.coupleNames}
-            defaults={{
-              name: first ? fullName(first.firstName, first.lastName) : '',
-              email: guest?.invitation.email ?? first?.email ?? '',
-              phone: guest?.invitation.phone ? formatPhone(guest.invitation.phone) : '',
-            }}
-          />
+          <div className="gift-detail__escolha">
+            <EscolherPresente id={gift.id} nome={gift.name} sugeridoCents={custom ? gift.suggestedCents : null} />
+            <p className="result__text" style={{ marginTop: 14 }}>
+              Escolha quantos presentes quiser e finalize tudo de uma vez{custom ? ' — o valor você define ao finalizar' : ''}.
+            </p>
+            <div className="btn-row" style={{ marginTop: 18 }}>
+              <Link href="/presentes" className="btn">
+                Ver outros presentes
+              </Link>
+            </div>
+          </div>
         ) : (
           <div className="result">
             <p className="gift__given" style={{ fontSize: '1.5rem' }}>
@@ -71,6 +66,7 @@ export default async function GiftPage(props: PageProps<'/presentes/[id]'>) {
           </div>
         )}
       </div>
+      {gift.avail.available ? <SacolaBarra precos={{ [gift.id]: { cents: gift.amountCents, livre: custom } }} /> : null}
     </div>
   )
 }

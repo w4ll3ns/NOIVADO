@@ -1,14 +1,14 @@
 import { notFound, redirect } from 'next/navigation'
 import { env } from '@/lib/env'
-import { getPaymentById, simulatePayment } from '@/lib/payments/service'
+import { getOrder, simulatePayment } from '@/lib/payments/service'
 import { formatBRL } from '@/lib/format'
 
 /** Somente em desenvolvimento (sem credenciais do Mercado Pago): simula o checkout. */
 export default async function SimulationPage(props: PageProps<'/presentes/simulacao/[id]'>) {
   if (!env.paymentsSimulation) notFound()
   const { id } = await props.params
-  const payment = await getPaymentById(id)
-  if (!payment || payment.provider !== 'simulation') notFound()
+  const order = await getOrder(id)
+  if (!order || order.provider !== 'simulation') notFound()
 
   async function decide(form: FormData) {
     'use server'
@@ -26,7 +26,8 @@ export default async function SimulationPage(props: PageProps<'/presentes/simula
           Simulação do Mercado Pago
         </h1>
         <p className="muted" style={{ margin: '12px 0 20px' }}>
-          {payment.giftName} · {formatBRL(payment.amountCents)} · {payment.payerName}
+          {order.rows.map((r) => `${r.giftName} (${formatBRL(r.amountCents)})`).join(' + ')} · total {formatBRL(order.totalCents)} ·{' '}
+          {order.rows[0].payerName}
         </p>
         <p className="notice" style={{ textAlign: 'left' }}>
           Configure <code>MP_ACCESS_TOKEN</code> para usar o checkout real. Esta página não existe em produção.
