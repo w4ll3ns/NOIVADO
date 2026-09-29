@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
+import { INTRO_FLAG } from './constants'
 import { desenhar, prepararDesenho, type Desenho } from './desenho'
 import { iniciarParticulas } from './particulas'
 
@@ -55,7 +56,7 @@ export function CasaraoIntro(props: Props) {
   const desenho = useRef<Desenho | null>(null)
   const phaseRef = useRef<Phase>('drawing')
   phaseRef.current = phase
-  /** Decidido antes da pintura: a abertura já tocou nesta visita. */
+  /** Decidido antes da pintura: a abertura não toca desta vez. */
   const seenRef = useRef(false)
 
   const later = (ms: number, fn: () => void) => {
@@ -66,14 +67,17 @@ export function CasaraoIntro(props: Props) {
     timers.current = []
   }
 
-  // Já tocou nesta visita (voltou à home navegando pelo site)? Some antes da pintura.
+  // Só toca quando a página carregada (aberta ou recarregada) é a própria home. Chegando nela
+  // navegando pelo site, ou se já tocou, some antes da pintura. "Rever a abertura" força.
   useIsoLayoutEffect(() => {
     if (props.force) {
       document.documentElement.classList.remove('intro-seen')
       return
     }
-    if (document.documentElement.classList.contains('intro-seen')) {
+    const carregouNaHome = INTRO_FLAG in window
+    if (!carregouNaHome || document.documentElement.classList.contains('intro-seen')) {
       seenRef.current = true
+      document.documentElement.classList.add('intro-seen')
       setPhase('done')
     }
   }, [props.force])

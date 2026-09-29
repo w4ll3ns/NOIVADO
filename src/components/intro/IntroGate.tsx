@@ -1,5 +1,6 @@
 import { headers } from 'next/headers'
 import { CasaraoIntro } from './CasaraoIntro'
+import { INTRO_FLAG } from './constants'
 import { Casarao, CASARAO_PORTA } from '@/components/casarao/Casarao'
 import { CoupleNames } from '@/components/site/CoupleNames'
 
@@ -17,14 +18,14 @@ type Props = {
 }
 
 /**
- * Abertura com o casarão, a cada visita: toda vez que o site é aberto (ou recarregado) ela toca;
- * só não se repete ao navegar entre as páginas e voltar para a home na mesma visita.
- * Renderizada no servidor (pinta imediatamente, sem esperar JS); um script inline já começa a
- * baixar o mapa de tempo da animação de desenho.
+ * Abertura com o casarão: toca toda vez que a home é aberta ou recarregada. Chegando à home
+ * navegando pelo site (ex.: "Voltar" do Dress Code) ela não aparece.
+ * Renderizada no servidor (pinta imediatamente, sem esperar JS). O script inline só roda quando
+ * a home vem do servidor: marca isso no `window` e já começa a baixar o mapa de tempo do desenho.
  */
 export async function IntroGate(props: Props) {
   const nonce = (await headers()).get('x-nonce') ?? undefined
-  const prefetch = `new Image().src='${TEMPO_SRC}'`
+  const prefetch = `window.${INTRO_FLAG}=1;new Image().src='${TEMPO_SRC}'`
   const script = props.force ? `document.documentElement.classList.remove('intro-seen');${prefetch}` : prefetch
   return (
     <>
