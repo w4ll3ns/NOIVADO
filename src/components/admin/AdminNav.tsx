@@ -18,7 +18,7 @@ export function AdminNav({ items, footer }: { items: AdminNavItem[]; footer: Rea
     <>
       <div className="a-topbar">
         <Link href="/admin" className="a-brand__names" style={{ textDecoration: 'none', fontSize: '1.6rem' }}>
-          Maby &amp; Chris
+          Maby e Chris
         </Link>
         <button type="button" className="a-btn" aria-expanded={open} onClick={() => setOpen(true)}>
           Menu
@@ -26,7 +26,7 @@ export function AdminNav({ items, footer }: { items: AdminNavItem[]; footer: Rea
       </div>
       <aside className={`a-sidebar${open ? ' is-open' : ''}`} aria-label="Menu do painel">
         <Link href="/admin" className="a-brand">
-          <div className="a-brand__names">Maby &amp; Chris</div>
+          <div className="a-brand__names">Maby e Chris</div>
           <div className="a-brand__sub">Painel do noivado</div>
         </Link>
         {open ? (

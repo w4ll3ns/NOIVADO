@@ -59,10 +59,12 @@ export async function saveScheduleAction(form: FormData) {
   if (form.get('op') === 'delete' && /^[0-9a-f-]{36}$/.test(id)) {
     await db.delete(schema.scheduleItems).where(eq(schema.scheduleItems.id, id))
   } else if (title && timeLabel) {
+    const icon = String(form.get('iconMediaId') ?? '')
     const values = {
       title,
       timeLabel,
       description: cleanText(form.get('description'), 400) || null,
+      iconMediaId: /^[0-9a-f-]{36}$/.test(icon) ? icon : null,
       sortOrder: Number(form.get('sortOrder') ?? 0) || 0,
       isActive: form.get('isActive') === 'on',
       updatedAt: new Date(),

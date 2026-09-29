@@ -6,7 +6,7 @@ import { formatDateDots, formatDateLong, formatTime, weekdayOf } from '@/lib/for
 import { googleMapsUrl, wazeUrl } from '@/lib/event'
 import { mediaUrl } from '@/lib/media'
 
-type ScheduleItem = { id: string; timeLabel: string; title: string; description: string | null }
+type ScheduleItem = { id: string; timeLabel: string; title: string; description: string | null; iconMediaId: string | null }
 
 export function EventDetails({ settings, schedule }: { settings: Settings; schedule: ScheduleItem[] }) {
   const e = settings.event
@@ -17,6 +17,7 @@ export function EventDetails({ settings, schedule }: { settings: Settings; sched
     { title: 'Observações', text: e.notes },
     { title: 'Recomendações', text: e.recommendations },
   ].filter((g) => g.text.trim())
+  const withIcons = schedule.some((s) => s.iconMediaId)
   return (
     <section id="noivado" className="section section--cream">
       <div className="container">
@@ -45,10 +46,18 @@ export function EventDetails({ settings, schedule }: { settings: Settings; sched
         </div>
 
         {schedule.length ? (
-          <ol className="programme" aria-label="Programação">
+          <ol className={withIcons ? 'programme programme--icones' : 'programme'} aria-label="Programação">
             {schedule.map((s) => (
               <li key={s.id} className="programme__item">
                 <span className="programme__time">{s.timeLabel}</span>
+                {withIcons ? (
+                  <span className="programme__icon" aria-hidden="true">
+                    {s.iconMediaId ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={mediaUrl(s.iconMediaId, 'thumb')!} alt="" width={52} height={52} loading="lazy" decoding="async" />
+                    ) : null}
+                  </span>
+                ) : null}
                 <span>
                   <span className="programme__title">{s.title}</span>
                   {s.description ? <span className="programme__desc" style={{ display: 'block' }}>{s.description}</span> : null}

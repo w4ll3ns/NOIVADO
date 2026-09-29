@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation'
 import { asc } from 'drizzle-orm'
 import { PageHead } from '@/components/admin/ui'
 import { ConfirmSubmit } from '@/components/admin/ClientBits'
+import { MediaPicker } from '@/components/admin/MediaPicker'
 import { requireAdmin, hasRole } from '@/lib/auth/session'
 import { db, schema } from '@/lib/db'
 import { getSettings } from '@/lib/settings'
@@ -169,10 +170,12 @@ async function ScheduleEditor({ canEdit }: { canEdit: boolean }) {
   const items = await db.select().from(schema.scheduleItems).orderBy(asc(schema.scheduleItems.sortOrder), asc(schema.scheduleItems.createdAt))
   return (
     <section className="a-card">
-      <h2 className="a-card__title">Programação</h2>
+      <h2 className="a-card__title">
+        Programação <small>ícone opcional ao lado de cada momento (PNG com fundo transparente) — escolha e clique em Salvar</small>
+      </h2>
       <div style={{ display: 'grid', gap: 10 }}>
         {[...items, null].map((s) => (
-          <form key={s?.id ?? 'new'} action={saveScheduleAction} className="a-form-grid" style={{ gridTemplateColumns: '110px 1fr 2fr 80px auto', alignItems: 'end', borderTop: '1px solid var(--a-line)', paddingTop: 10 }}>
+          <form key={s?.id ?? 'new'} action={saveScheduleAction} className="a-form-grid" style={{ gridTemplateColumns: '110px 1fr 2fr 80px', alignItems: 'end', borderTop: '1px solid var(--a-line)', paddingTop: 10 }}>
             <input type="hidden" name="id" value={s?.id ?? ''} />
             <label className="a-field">
               <span>Horário</span>
@@ -190,8 +193,12 @@ async function ScheduleEditor({ canEdit }: { canEdit: boolean }) {
               <span>Ordem</span>
               <input className="a-input" type="number" name="sortOrder" defaultValue={s?.sortOrder ?? items.length} disabled={!canEdit} />
             </label>
+            <div className="a-field" style={{ gridColumn: '1 / 3' }}>
+              <span>Ícone</span>
+              <MediaPicker name="iconMediaId" kind="icone" purpose="schedule-icon" initialId={s?.iconMediaId ?? null} disabled={!canEdit} />
+            </div>
             {canEdit ? (
-              <div className="a-row-actions">
+              <div className="a-row-actions" style={{ gridColumn: '3 / -1', alignSelf: 'end', justifyContent: 'flex-end' }}>
                 <label className="a-check">
                   <input type="checkbox" name="isActive" defaultChecked={s?.isActive ?? true} /> Visível
                 </label>

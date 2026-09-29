@@ -114,6 +114,8 @@ export const scheduleItems = pgTable('schedule_items', {
   timeLabel: text('time_label').notNull(),
   title: text('title').notNull(),
   description: text('description'),
+  /** Ícone enviado pelo painel (PNG com fundo transparente), mostrado ao lado do item. */
+  iconMediaId: uuid('icon_media_id').references(() => media.id, { onDelete: 'set null' }),
   sortOrder: integer('sort_order').notNull().default(0),
   isActive: boolean('is_active').notNull().default(true),
   createdAt: createdAt(),

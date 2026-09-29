@@ -15,7 +15,7 @@ export default async function LoginPage(props: PageProps<'/admin/login'>) {
       <div className="a-login__card">
         <Crest />
         <p className="script" style={{ fontSize: '2.6rem', margin: '6px 0 0' }}>
-          Maby &amp; Chris
+          Maby e Chris
         </p>
         <p className="caps" style={{ fontSize: '0.72rem' }}>
           Painel do noivado

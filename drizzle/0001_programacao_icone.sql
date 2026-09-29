@@ -1,0 +1,2 @@
+ALTER TABLE "schedule_items" ADD COLUMN "icon_media_id" uuid;--> statement-breakpoint
+ALTER TABLE "schedule_items" ADD CONSTRAINT "schedule_items_icon_media_id_media_id_fk" FOREIGN KEY ("icon_media_id") REFERENCES "public"."media"("id") ON DELETE set null ON UPDATE no action;
