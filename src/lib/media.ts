@@ -6,7 +6,7 @@ import { processImage } from '@/lib/images'
 import { storage } from '@/lib/storage'
 
 export type MediaRow = typeof schema.media.$inferSelect
-export type MediaVariant = 'web' | 'thumb' | 'original'
+export type MediaVariant = 'web' | 'thumb' | 'original' | 'audio'
 
 export function mediaUrl(id: string | null | undefined, variant: MediaVariant = 'web') {
   return id ? `/m/${id}/${variant}` : null
@@ -38,6 +38,35 @@ export async function saveMedia(file: File, alt?: string | null): Promise<MediaR
       dominantColor: img.dominantColor,
       alt: alt ?? null,
     })
+    .returning()
+  return row
+}
+
+export class AudioError extends Error {}
+
+/** Formato pelo conteúdo do arquivo (não pela extensão): MP3, AAC ou M4A — os que tocam em todo celular. */
+function audioType(buf: Buffer): { mime: string; ext: string } | null {
+  if (buf.length < 12) return null
+  if (buf.subarray(0, 3).toString('latin1') === 'ID3') return { mime: 'audio/mpeg', ext: 'mp3' }
+  if (buf.subarray(4, 8).toString('latin1') === 'ftyp') return { mime: 'audio/mp4', ext: 'm4a' }
+  if (buf[0] === 0xff && (buf[1] & 0xe0) === 0xe0) {
+    // quadro MPEG: camada 00 = AAC (ADTS); as demais = MP3
+    return (buf[1] & 0x06) === 0 ? { mime: 'audio/aac', ext: 'aac' } : { mime: 'audio/mpeg', ext: 'mp3' }
+  }
+  return null
+}
+
+/** Salva a música de fundo enviada pelo admin, como veio (servida em /m/{id}/audio). */
+export async function saveAudio(file: File): Promise<MediaRow> {
+  const buf = Buffer.from(await file.arrayBuffer())
+  const type = audioType(buf)
+  if (!type) throw new AudioError('Formato não suportado. Envie a música em MP3 (ou M4A).')
+  const id = randomUUID()
+  const key = `media/${id}/musica.${type.ext}`
+  await storage().put(key, buf, type.mime)
+  const [row] = await db
+    .insert(schema.media)
+    .values({ id, originalKey: key, webKey: key, thumbKey: key, mime: type.mime, width: 0, height: 0, bytes: buf.length })
     .returning()
   return row
 }

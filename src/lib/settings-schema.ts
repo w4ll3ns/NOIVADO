@@ -45,6 +45,9 @@ export const introSettingsSchema = z.object({
   buttonLabel: text('Entrar', 30),
   welcomePhrase: text('Seja bem-vindo ao nosso noivado.', 200),
   welcomePhraseGuest: text('Entre e celebre conosco este novo capítulo.', 200),
+  /** Música de fundo (MP3/M4A enviado no painel): começa no "Entrar" da abertura. '' = sem música. */
+  musicMediaId: z.union([z.string().uuid(), z.literal('')]).default(''),
+  musicVolume: z.number().int().min(0).max(100).default(60),
 })
 
 export const homeSettingsSchema = z.object({

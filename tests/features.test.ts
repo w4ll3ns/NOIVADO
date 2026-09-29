@@ -103,3 +103,16 @@ describe('configurações', () => {
     expect(monogramFor('Maby & Chris')).toBe('M&C')
   })
 })
+
+describe('Range da música de fundo', () => {
+  it('interpreta os formatos de trecho', async () => {
+    const { parseRange } = await import('@/lib/http-range')
+    expect(parseRange(null, 1000)).toBeNull()
+    expect(parseRange('bytes=0-1', 1000)).toEqual({ start: 0, end: 1 })
+    expect(parseRange('bytes=500-', 1000)).toEqual({ start: 500, end: 999 })
+    expect(parseRange('bytes=-100', 1000)).toEqual({ start: 900, end: 999 })
+    expect(parseRange('bytes=900-5000', 1000)).toEqual({ start: 900, end: 999 })
+    expect(parseRange('bytes=1000-', 1000)).toBe('invalid')
+    expect(parseRange('bytes=0-1,5-9', 1000)).toBeNull()
+  })
+})

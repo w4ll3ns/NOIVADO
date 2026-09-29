@@ -6,10 +6,12 @@ import { Readable } from 'node:stream'
 import { env } from '@/lib/env'
 
 export type StoredObject = { body: ReadableStream<Uint8Array>; size?: number; contentType?: string }
+/** Trecho de bytes, inclusivo nas duas pontas (como no cabeçalho Range). */
+export type ByteRange = { start: number; end: number }
 
 export interface Storage {
   put(key: string, data: Buffer, contentType: string): Promise<void>
-  getStream(key: string): Promise<StoredObject | null>
+  getStream(key: string, range?: ByteRange): Promise<StoredObject | null>
   getBuffer(key: string): Promise<Buffer | null>
   delete(key: string): Promise<void>
 }
@@ -31,12 +33,12 @@ class LocalStorage implements Storage {
     await mkdir(path.dirname(f), { recursive: true })
     await writeFile(f, data)
   }
-  async getStream(key: string): Promise<StoredObject | null> {
+  async getStream(key: string, range?: ByteRange): Promise<StoredObject | null> {
     const f = this.file(key)
     try {
       const s = await stat(f)
-      const body = Readable.toWeb(createReadStream(f)) as ReadableStream<Uint8Array>
-      return { body, size: s.size }
+      const body = Readable.toWeb(createReadStream(f, range)) as ReadableStream<Uint8Array>
+      return { body, size: range ? range.end - range.start + 1 : s.size }
     } catch {
       return null
     }
@@ -78,11 +80,13 @@ class S3Storage implements Storage {
     const { client, mod } = await this.clientPromise
     await client.send(new mod.PutObjectCommand({ Bucket: this.bucket, Key: key, Body: data, ContentType: contentType }))
   }
-  async getStream(key: string): Promise<StoredObject | null> {
+  async getStream(key: string, range?: ByteRange): Promise<StoredObject | null> {
     assertKey(key)
     const { client, mod } = await this.clientPromise
     try {
-      const res = await client.send(new mod.GetObjectCommand({ Bucket: this.bucket, Key: key }))
+      const res = await client.send(
+        new mod.GetObjectCommand({ Bucket: this.bucket, Key: key, Range: range ? `bytes=${range.start}-${range.end}` : undefined }),
+      )
       if (!res.Body) return null
       return {
         body: res.Body.transformToWebStream() as ReadableStream<Uint8Array>,

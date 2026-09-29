@@ -4,6 +4,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProp
 import { INTRO_FLAG } from './constants'
 import { desenhar, prepararDesenho, type Desenho } from './desenho'
 import { iniciarParticulas } from './particulas'
+import { prepararParaAbertura, tocarDaAbertura } from '@/components/music/musica'
 
 /**
  * drawing  o casarão se desenha a traço (canvas)
@@ -85,6 +86,7 @@ export function CasaraoIntro(props: Props) {
   // Desenho → luzes → espera o "Entrar".
   useEffect(() => {
     if (seenRef.current) return
+    prepararParaAbertura()
     let cancelled = false
     const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
     const lightUp = () => {
@@ -143,6 +145,7 @@ export function CasaraoIntro(props: Props) {
   }, [])
 
   const skip = useCallback(() => {
+    tocarDaAbertura()
     clearTimers()
     desenho.current?.cancel()
     setPhase('leaving')
@@ -160,6 +163,7 @@ export function CasaraoIntro(props: Props) {
 
   const enter = () => {
     if (phase === 'opening' || phase === 'welcome' || phase === 'leaving') return
+    tocarDaAbertura()
     desenho.current?.cancel()
     clearTimers()
     poeira.current?.revoada()

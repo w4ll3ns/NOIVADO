@@ -1,14 +1,14 @@
 import { count } from 'drizzle-orm'
 import { db, schema } from '@/lib/db'
 import { getAdmin, hasRole } from '@/lib/auth/session'
-import { saveMedia } from '@/lib/media'
+import { AudioError, saveAudio, saveMedia } from '@/lib/media'
 import { ImageError } from '@/lib/images'
 import { isSameOrigin } from '@/lib/request'
 import { cleanLine } from '@/lib/sanitize'
 import { env } from '@/lib/env'
 import { audit } from '@/lib/audit'
 
-/** Upload de imagens do painel (galeria do casal, história, dress code). */
+/** Upload de imagens do painel (galeria do casal, história, dress code) e da música de fundo. */
 export async function POST(req: Request) {
   if (!isSameOrigin(req.headers)) return Response.json({ error: 'Origem inválida' }, { status: 403 })
   const admin = await getAdmin()
@@ -18,6 +18,17 @@ export async function POST(req: Request) {
   if (!(file instanceof File) || !file.size) return Response.json({ error: 'Arquivo ausente' }, { status: 400 })
   if (file.size > env.maxUploadBytes) return Response.json({ error: 'Arquivo muito grande' }, { status: 413 })
   const purpose = String(form?.get('purpose') ?? '')
+  if (purpose === 'music') {
+    try {
+      const media = await saveAudio(file)
+      await audit(admin.id, 'media.upload', 'media', media.id, { purpose })
+      return Response.json({ id: media.id, url: `/m/${media.id}/audio` })
+    } catch (err) {
+      if (err instanceof AudioError) return Response.json({ error: err.message }, { status: 415 })
+      console.error(err)
+      return Response.json({ error: 'Falha ao salvar a música' }, { status: 500 })
+    }
+  }
   try {
     const media = await saveMedia(file, cleanLine(form?.get('alt'), 200) || null)
     if (purpose === 'gallery') {

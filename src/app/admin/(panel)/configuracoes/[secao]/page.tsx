@@ -46,13 +46,20 @@ const SECTIONS: Section[] = [
     slug: 'abertura',
     label: 'Abertura e Home',
     key: 'intro',
-    intro: 'A abertura com o casarão aparece na primeira visita de cada aparelho.',
+    intro: 'A abertura com o casarão toca sempre que alguém abre (ou recarrega) a página inicial.',
     fields: [
       { name: 'enabled', label: 'Mostrar a abertura com o casarão', type: 'checkbox', span: true },
       { name: 'phrase', label: 'Frase da abertura', type: 'text', span: true },
       { name: 'buttonLabel', label: 'Texto do botão', type: 'text' },
       { name: 'welcomePhrase', label: 'Boas-vindas (visitante)', type: 'text' },
       { name: 'welcomePhraseGuest', label: 'Boas-vindas (convidado reconhecido)', type: 'text', span: true },
+      {
+        name: 'musicMediaId',
+        label: 'Música de fundo',
+        type: 'audio',
+        help: 'MP3 (ou M4A), até 25 MB. Começa quando o convidado toca em “Entrar” e continua enquanto ele navega pelo site; um botão ♪ no canto pausa.',
+      },
+      { name: 'musicVolume', label: 'Volume da música (0 a 100)', type: 'number', help: 'No iPhone vale o volume do próprio aparelho.' },
     ],
   },
   {

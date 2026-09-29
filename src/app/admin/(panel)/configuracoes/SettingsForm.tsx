@@ -6,7 +6,7 @@ import type { SettingsState } from './actions'
 export type FieldDef = {
   name: string
   label: string
-  type: 'text' | 'textarea' | 'date' | 'time' | 'checkbox' | 'number' | 'url' | 'tel' | 'email' | 'colors' | 'media'
+  type: 'text' | 'textarea' | 'date' | 'time' | 'checkbox' | 'number' | 'url' | 'tel' | 'email' | 'colors' | 'media' | 'audio'
   help?: string
   span?: boolean
   rows?: number
@@ -31,6 +31,59 @@ function ColorsEditor({ name, initial }: { name: string; initial: Color[] }) {
       <button type="button" className="a-btn a-btn--sm" style={{ justifySelf: 'start' }} onClick={() => setList((l) => [...l, { name: '', hex: '#b1a190' }])}>
         + Adicionar cor
       </button>
+    </div>
+  )
+}
+
+/** Envia um arquivo ao painel; devolve o id ou a mensagem de erro. */
+async function enviar(file: File, purpose: string): Promise<{ id: string } | { erro: string }> {
+  const fd = new FormData()
+  fd.append('file', file)
+  fd.append('purpose', purpose)
+  const res = await fetch('/api/admin/media', { method: 'POST', body: fd }).catch(() => null)
+  if (res?.ok) return { id: ((await res.json()) as { id: string }).id }
+  const msg = res ? ((await res.json().catch(() => null)) as { error?: string } | null)?.error : null
+  return { erro: `Não foi possível enviar “${file.name}”${msg ? `: ${msg.replace(/\.$/, '')}` : ''}.` }
+}
+
+function AudioField({ name, initial }: { name: string; initial: string }) {
+  const [id, setId] = useState(initial)
+  const [busy, setBusy] = useState(false)
+  const [erro, setErro] = useState('')
+  return (
+    <div>
+      <input type="hidden" name={name} value={id} />
+      {id ? (
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', marginBottom: 8 }}>
+          <audio controls preload="none" src={`/m/${id}/audio`} style={{ maxWidth: '100%' }} />
+          <button type="button" className="a-btn a-btn--sm a-btn--danger" onClick={() => setId('')}>
+            Remover música
+          </button>
+        </div>
+      ) : (
+        <p className="a-help">Nenhuma música enviada.</p>
+      )}
+      <label className="a-btn a-btn--sm">
+        {busy ? 'Enviando…' : id ? 'Trocar música' : '+ Enviar música'}
+        <input
+          type="file"
+          accept="audio/mpeg,audio/mp4,audio/aac,audio/x-m4a,.mp3,.m4a,.aac"
+          hidden
+          onChange={async (e) => {
+            const file = e.target.files?.[0]
+            e.target.value = ''
+            if (!file) return
+            setBusy(true)
+            setErro('')
+            const r = await enviar(file, 'music')
+            if ('id' in r) setId(r.id)
+            else setErro(r.erro)
+            setBusy(false)
+          }}
+        />
+      </label>
+      {erro ? <p className="a-alert a-alert--bad">{erro}</p> : null}
+      <p className="a-help">Lembre-se de salvar depois de enviar.</p>
     </div>
   )
 }
@@ -72,17 +125,9 @@ function MediaListEditor({ name, initial }: { name: string; initial: string[] })
             setBusy(true)
             setErro('')
             for (const f of files) {
-              const fd = new FormData()
-              fd.append('file', f)
-              fd.append('purpose', 'dress')
-              const res = await fetch('/api/admin/media', { method: 'POST', body: fd }).catch(() => null)
-              if (res?.ok) {
-                const { id } = (await res.json()) as { id: string }
-                setIds((l) => [...l, id])
-              } else {
-                const msg = res ? ((await res.json().catch(() => null)) as { error?: string } | null)?.error : null
-                setErro(`Não foi possível enviar “${f.name}”${msg ? `: ${msg.replace(/\.$/, '')}` : ''}.`)
-              }
+              const r = await enviar(f, 'dress')
+              if ('id' in r) setIds((l) => [...l, r.id])
+              else setErro(r.erro)
             }
             setBusy(false)
           }}
@@ -111,9 +156,9 @@ export function SettingsForm({ action, fields, values, readOnly }: { action: (p:
               )
             // Listas (cores, imagens) têm vários controles: num <label>, clicar no nome ou na foto
             // acionaria o primeiro deles (o ✕ da 1ª imagem).
-            const Field = f.type === 'colors' || f.type === 'media' ? 'div' : 'label'
+            const Field = f.type === 'colors' || f.type === 'media' || f.type === 'audio' ? 'div' : 'label'
             return (
-              <Field key={f.name} className={`a-field${f.span || f.type === 'textarea' || f.type === 'colors' || f.type === 'media' ? ' span-2' : ''}`}>
+              <Field key={f.name} className={`a-field${f.span || f.type === 'textarea' || f.type === 'colors' || f.type === 'media' || f.type === 'audio' ? ' span-2' : ''}`}>
                 <span>{f.label}</span>
                 {f.type === 'textarea' ? (
                   <textarea className="a-textarea" name={f.name} rows={f.rows ?? 3} defaultValue={String(v ?? '')} />
@@ -121,6 +166,8 @@ export function SettingsForm({ action, fields, values, readOnly }: { action: (p:
                   <ColorsEditor name={f.name} initial={(v as Color[]) ?? []} />
                 ) : f.type === 'media' ? (
                   <MediaListEditor name={f.name} initial={(v as string[]) ?? []} />
+                ) : f.type === 'audio' ? (
+                  <AudioField name={f.name} initial={String(v ?? '')} />
                 ) : (
                   <input className="a-input" type={f.type} name={f.name} defaultValue={String(v ?? '')} />
                 )}

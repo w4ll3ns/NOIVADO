@@ -1,8 +1,10 @@
 import { SiteHeader, type NavLink } from '@/components/site/SiteHeader'
 import { SiteFooter } from '@/components/site/SiteFooter'
+import { MusicPlayer } from '@/components/music/MusicPlayer'
 import { getSettings } from '@/lib/settings'
 import { getCurrentGuest } from '@/lib/invitations'
 import { formatDateDots } from '@/lib/format'
+import { mediaUrl } from '@/lib/media'
 
 export default async function SiteLayout({ children }: { children: React.ReactNode }) {
   const [settings, guest] = await Promise.all([getSettings(), getCurrentGuest()])
@@ -35,6 +37,9 @@ export default async function SiteLayout({ children }: { children: React.ReactNo
         dateDots={formatDateDots(settings.event.date)}
         showGuestbook={settings.guestbook.enabled}
       />
+      {settings.intro.musicMediaId ? (
+        <MusicPlayer src={mediaUrl(settings.intro.musicMediaId, 'audio')!} volume={settings.intro.musicVolume} />
+      ) : null}
     </>
   )
 }
