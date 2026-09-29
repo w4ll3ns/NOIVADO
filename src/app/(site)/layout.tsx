@@ -3,7 +3,6 @@ import { SiteFooter } from '@/components/site/SiteFooter'
 import { getSettings } from '@/lib/settings'
 import { getCurrentGuest } from '@/lib/invitations'
 import { formatDateDots } from '@/lib/format'
-import { monogramFor } from '@/lib/event'
 
 export default async function SiteLayout({ children }: { children: React.ReactNode }) {
   const [settings, guest] = await Promise.all([getSettings(), getCurrentGuest()])
@@ -11,12 +10,11 @@ export default async function SiteLayout({ children }: { children: React.ReactNo
     { href: '/#inicio', label: 'Início' },
     { href: '/#noivado', label: 'O Noivado' },
     { href: '/#localizacao', label: 'Localização' },
-    ...(settings.dressCode.enabled ? [{ href: '/#traje', label: 'Dress Code' }] : []),
+    ...(settings.dressCode.enabled ? [{ href: '/traje', label: 'Dress Code' }] : []),
     ...(settings.gifts.enabled ? [{ href: '/presentes', label: 'Presentes' }] : []),
     { href: '/galeria', label: 'Galeria' },
     { href: '/#duvidas', label: 'Dúvidas' },
   ]
-  const monogram = monogramFor(settings.event.coupleNames)
   return (
     <>
       <a href="#conteudo" className="skip-link">
@@ -24,7 +22,6 @@ export default async function SiteLayout({ children }: { children: React.ReactNo
       </a>
       <SiteHeader
         links={links}
-        monogram={monogram}
         ctaHref={guest ? `/i/${guest.token}/presenca` : '/confirmar'}
         ctaLabel={guest && guest.invitation.rsvpStatus !== 'pending' ? 'Minha presença' : 'Confirmar presença'}
         ctaShort={guest && guest.invitation.rsvpStatus !== 'pending' ? 'Presença' : 'Confirmar'}

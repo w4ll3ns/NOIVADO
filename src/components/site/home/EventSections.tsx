@@ -1,8 +1,10 @@
+import Link from 'next/link'
+import type { CSSProperties } from 'react'
 import { CompassRose, Rule } from '@/components/ornaments/Ornaments'
 import { EngravedIcon } from '@/components/ornaments/EngravedIcon'
 import { SectionHead } from '@/components/site/SectionHead'
 import type { Settings } from '@/lib/settings-schema'
-import { formatDateLong, weekdayOf } from '@/lib/format'
+import { endOfDayInTz, formatDateLong, weekdayOf } from '@/lib/format'
 import { eventTime, googleMapsUrl, wazeUrl } from '@/lib/event'
 import { mediaUrl } from '@/lib/media'
 
@@ -86,81 +88,66 @@ export function EventDetails({ settings, schedule }: { settings: Settings; sched
   )
 }
 
-export function LocationSection({ settings }: { settings: Settings }) {
+/** Localização, Dress Code, Lista de Presentes e Confirmar presença, reunidos numa seção só. */
+export function GuideSection({ settings, rsvpHref, responded }: { settings: Settings; rsvpHref: string; responded: boolean }) {
   const e = settings.event
+  const r = settings.rsvp
+  const deadline = r.deadline ? endOfDayInTz(r.deadline) : null
+  const rsvpOpen = !deadline || deadline.getTime() > Date.now()
+  const atalhos: Atalho[] = [
+    { href: googleMapsUrl(e), external: true, icon: 'mapa', title: 'Google Maps', sub: 'Como chegar' },
+    { href: wazeUrl(e), external: true, icon: 'pin', title: 'Waze', sub: 'Como chegar' },
+    ...(settings.dressCode.enabled
+      ? [{ href: '/traje', icon: 'vestido', title: 'Dress Code', sub: settings.dressCode.type }]
+      : []),
+    ...(settings.gifts.enabled
+      ? [{ href: '/presentes', icon: 'presente', title: 'Lista de Presentes', sub: 'Com carinho' }]
+      : []),
+  ]
   return (
     <section id="localizacao" className="section">
       <div className="container">
-        <SectionHead eyebrow="Como chegar" title="Localização" />
-        <div className="location">
+        <SectionHead eyebrow="Para o grande dia" title="Informações" />
+        <div className="guia">
           <CompassRose title="Rosa dos ventos" />
-          <div className="location__text">
-            <p className="location__venue">{e.venueName}</p>
-            <p className="location__address">{e.address}</p>
-            <div className="btn-row" style={{ marginInline: 0 }}>
-              <a className="btn btn--primary" href={googleMapsUrl(e)} target="_blank" rel="noopener noreferrer">
-                Abrir no Google Maps
-              </a>
-              <a className="btn" href={wazeUrl(e)} target="_blank" rel="noopener noreferrer">
-                Abrir no Waze
-              </a>
-            </div>
-          </div>
+          <p className="guia__venue">{e.venueName}</p>
+          <p className="guia__address">{e.address}</p>
+          <ul className="atalhos" style={{ '--n': atalhos.length } as CSSProperties}>
+            {atalhos.map((a) => {
+              const body = (
+                <>
+                  <EngravedIcon name={a.icon} />
+                  <span className="atalho__titulo">{a.title}</span>
+                  <span className="atalho__sub">{a.sub}</span>
+                </>
+              )
+              return (
+                <li key={a.title}>
+                  {a.external ? (
+                    <a className="atalho" href={a.href} target="_blank" rel="noopener noreferrer">
+                      {body}
+                    </a>
+                  ) : (
+                    <Link className="atalho" href={a.href}>
+                      {body}
+                    </Link>
+                  )}
+                </li>
+              )
+            })}
+          </ul>
+          <Link href={rsvpHref} className="btn btn--primary guia__rsvp">
+            {responded ? 'Minha presença' : 'Confirmar presença'}
+          </Link>
+          {r.deadline && rsvpOpen ? (
+            <p className="guia__prazo">
+              {responded ? 'Você pode alterar' : 'Confirme'} até {formatDateLong(r.deadline)}.
+            </p>
+          ) : null}
         </div>
       </div>
     </section>
   )
 }
 
-export function DressCodeSection({ settings }: { settings: Settings }) {
-  const d = settings.dressCode
-  if (!d.enabled) return null
-  return (
-    <section id="traje" className="section section--cream">
-      <div className="container">
-        <SectionHead eyebrow="Traje" title="Dress Code" />
-        <div className="dress">
-          <EngravedIcon name="vestido" className="dress__icon" />
-          <p className="dress__type">{d.type}</p>
-          <p className="dress__desc">“{d.description}”</p>
-          {d.suggestedColors.length ? (
-            <>
-              <p className="dress__group-title">Paleta sugerida</p>
-              <ul className="swatches">
-                {d.suggestedColors.map((c) => (
-                  <li key={c.name + c.hex} className="swatch">
-                    <span className="swatch__chip" style={{ backgroundColor: c.hex }} />
-                    {c.name}
-                  </li>
-                ))}
-              </ul>
-            </>
-          ) : null}
-          {d.reservedColors.length ? (
-            <>
-              <p className="dress__group-title">Cores reservadas</p>
-              <ul className="swatches">
-                {d.reservedColors.map((c) => (
-                  <li key={c.name + c.hex} className="swatch swatch--reserved">
-                    <span className="swatch__chip" style={{ backgroundColor: c.hex }} />
-                    {c.name}
-                  </li>
-                ))}
-              </ul>
-              {d.reservedNote ? <p className="muted italic" style={{ marginTop: 14 }}>{d.reservedNote}</p> : null}
-            </>
-          ) : null}
-          {d.recommendations ? <p style={{ marginTop: 26 }}>{d.recommendations}</p> : null}
-          {d.referenceMediaIds.length ? (
-            <div className="dress__refs">
-              {d.referenceMediaIds.map((id) => (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img key={id} src={mediaUrl(id, 'thumb')!} alt="Referência de traje" loading="lazy" decoding="async" />
-              ))}
-            </div>
-          ) : null}
-        </div>
-      </div>
-    </section>
-  )
-}
+type Atalho = { href: string; external?: boolean; icon: string; title: string; sub: string }

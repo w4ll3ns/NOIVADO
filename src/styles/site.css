@@ -309,21 +309,6 @@
   gap: 16px;
   height: 100%;
 }
-.monogram {
-  font-family: var(--font-script);
-  font-size: 1.9rem;
-  line-height: 1;
-  color: var(--sepia);
-  text-decoration: none;
-  white-space: nowrap;
-  padding-top: 4px;
-}
-.monogram__amp {
-  font-family: var(--font-text);
-  font-style: italic;
-  font-size: 0.62em;
-  padding: 0 0.06em;
-}
 .site-nav {
   display: none;
 }
@@ -344,17 +329,13 @@
   color: var(--sepia-deep);
   border-bottom-color: var(--line);
 }
-.site-header__actions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
+/* Menu à esquerda (no celular) ou links (no computador); "Confirmar" sempre à direita. */
 .menu-toggle {
   display: inline-flex;
   align-items: center;
   gap: 8px;
   min-height: 44px;
-  padding: 0 6px;
+  padding: 0 8px 0 0;
   border: 0;
   background: none;
   font-family: var(--font-title);
@@ -369,6 +350,15 @@
   width: 20px;
   height: 9px;
   border-block: 1px solid currentColor;
+}
+.menu-toggle__x {
+  display: inline-block;
+  width: 20px;
+  font-size: 1.5rem;
+  font-weight: 400;
+  line-height: 0.6;
+  letter-spacing: 0;
+  text-align: center;
 }
 @media (min-width: 1180px) {
   .site-nav {
@@ -394,21 +384,26 @@
   flex-direction: column;
   background-color: var(--paper);
   background-image: var(--paper-grain);
-  padding: 18px var(--gutter) max(28px, env(safe-area-inset-bottom));
+  padding: 0 var(--gutter) max(28px, env(safe-area-inset-bottom));
   overflow-y: auto;
-  animation: sheet-in 260ms var(--ease);
+  overscroll-behavior: contain;
+  animation: sheet-in 280ms var(--ease);
 }
 @keyframes sheet-in {
   from {
     opacity: 0;
-    transform: translateY(-8px);
+    transform: translateX(-14px);
   }
 }
+/* "Fechar" no mesmo lugar do "Menu". */
 .menu-sheet__top {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  min-height: 44px;
+  flex: none;
+  height: var(--header-h);
+}
+.menu-sheet .btn--block {
+  flex: none;
 }
 .menu-sheet nav {
   margin: auto 0;
@@ -870,42 +865,113 @@
 }
 
 /* =========================================================
-   Localização
+   Informações: local + atalhos (mapas, dress code, presentes)
+   e confirmar presença
    ========================================================= */
-.location {
-  display: grid;
-  gap: 28px;
-  align-items: center;
+.guia {
   max-width: 900px;
   margin: 0 auto;
+  text-align: center;
 }
-@media (min-width: 760px) {
-  .location {
-    grid-template-columns: 240px 1fr;
-    gap: 56px;
-  }
-}
-.location .orn-compass {
-  width: min(200px, 52vw);
+.guia .orn-compass {
+  width: clamp(92px, 24vw, 124px);
   height: auto;
-  margin: 0 auto;
+  margin: 0 auto 14px;
 }
-.location__venue {
+.guia__venue {
   font-family: var(--font-title);
   font-size: var(--fs-display);
   font-weight: 500;
+  line-height: 1.15;
   color: var(--sepia);
+  margin: 0;
 }
-.location__address {
+.guia__address {
   font-size: 1.1rem;
   color: var(--ink-soft);
-  margin: 6px 0 22px;
+  margin: 6px auto 0;
+  max-width: 34rem;
   white-space: pre-line;
 }
+.atalhos {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  list-style: none;
+  padding: 0;
+  margin: clamp(28px, 6vw, 40px) 0 0;
+}
 @media (max-width: 759px) {
-  .location__text {
-    text-align: center;
+  /* número ímpar de atalhos: o último ocupa a linha inteira */
+  .atalhos > li:last-child:nth-child(odd) {
+    grid-column: 1 / -1;
   }
+}
+@media (min-width: 760px) {
+  .atalhos {
+    grid-template-columns: repeat(var(--n, 4), minmax(0, 1fr));
+    gap: 16px;
+  }
+}
+/* Cartão-botão com filete duplo, como as molduras do convite. */
+.atalho {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 100%;
+  min-height: 140px;
+  padding: 20px 10px 18px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: rgba(252, 247, 242, 0.5);
+  box-shadow:
+    inset 0 0 0 4px var(--paper),
+    inset 0 0 0 5px var(--line-soft);
+  color: var(--sepia);
+  text-decoration: none;
+  transition:
+    background-color var(--dur) var(--ease),
+    border-color var(--dur) var(--ease),
+    color var(--dur) var(--ease);
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+.atalho:hover {
+  background: rgba(124, 104, 85, 0.07);
+  border-color: var(--sepia);
+  color: var(--sepia-deep);
+}
+.atalho .ei {
+  width: 42px;
+  height: 42px;
+  margin-bottom: 4px;
+}
+.atalho__titulo {
+  font-family: var(--font-title);
+  font-weight: 500;
+  font-size: 0.84rem;
+  letter-spacing: 0.18em;
+  padding-left: 0.18em;
+  text-transform: uppercase;
+  line-height: 1.35;
+}
+.atalho__sub {
+  font-style: italic;
+  font-size: 1rem;
+  line-height: 1.3;
+  color: var(--ink-soft);
+}
+.guia__rsvp {
+  width: 100%;
+  max-width: 420px;
+  margin-top: clamp(22px, 5vw, 32px);
+}
+.guia__prazo {
+  margin-top: 12px;
+  font-style: italic;
+  color: var(--ink-soft);
 }
 
 /* =========================================================

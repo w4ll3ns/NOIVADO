@@ -10,16 +10,3 @@ export function CoupleNames({ names }: { names: string }) {
     </>
   )
 }
-
-/** Monograma "M&C" com o "&" clássico do itálico da EB Garamond. */
-export function Monogram({ text }: { text: string }) {
-  const [a, b] = text.split('&')
-  if (b === undefined) return <>{text}</>
-  return (
-    <>
-      {a}
-      <span className="monogram__amp">&amp;</span>
-      {b}
-    </>
-  )
-}

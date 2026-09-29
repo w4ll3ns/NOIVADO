@@ -5,29 +5,6 @@ import type { Settings } from '@/lib/settings-schema'
 import type { Moment } from '@/lib/event'
 import { eventTemplateValues, renderTemplate } from '@/lib/templates'
 
-export function GiftsTeaser({ settings }: { settings: Settings }) {
-  if (!settings.gifts.enabled) return null
-  const first = settings.gifts.intro.split(/\n\s*\n/)
-  return (
-    <section id="presentes" className="section">
-      <div className="container narrow center">
-        <SectionHead eyebrow="Com carinho" title="Lista de Presentes" />
-        <EngravedIcon name="presente" size={56} className="teaser-icon" />
-        {first.map((p, i) => (
-          <p key={i} className="section-lead" style={{ marginBottom: 14 }}>
-            {p}
-          </p>
-        ))}
-        <div className="btn-row" style={{ marginTop: 26 }}>
-          <Link href="/presentes" className="btn btn--primary">
-            Ver presentes
-          </Link>
-        </div>
-      </div>
-    </section>
-  )
-}
-
 export function GalleryTeaser({ approved, publicEnabled }: { approved: number; publicEnabled: boolean }) {
   if (!publicEnabled || approved === 0) return null
   return (

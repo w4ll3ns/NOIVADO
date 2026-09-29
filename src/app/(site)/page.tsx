@@ -1,7 +1,7 @@
 import { IntroGate } from '@/components/intro/IntroGate'
 import { Hero } from '@/components/site/home/Hero'
-import { DressCodeSection, EventDetails, LocationSection } from '@/components/site/home/EventSections'
-import { FaqSection, GalleryTeaser, GiftsTeaser, GuestbookTeaser } from '@/components/site/home/MoreSections'
+import { EventDetails, GuideSection } from '@/components/site/home/EventSections'
+import { FaqSection, GalleryTeaser, GuestbookTeaser } from '@/components/site/home/MoreSections'
 import { getSettings } from '@/lib/settings'
 import { getCurrentGuest } from '@/lib/invitations'
 import { countApprovedPhotos, getFaqs, getMainAlbum, getSchedule } from '@/lib/content'
@@ -36,9 +36,7 @@ export default async function HomePage(props: PageProps<'/'>) {
       ) : null}
       <Hero settings={settings} greeting={guest?.greeting} rsvpHref={rsvpHref} />
       <EventDetails settings={settings} schedule={schedule} />
-      <LocationSection settings={settings} />
-      <DressCodeSection settings={settings} />
-      <GiftsTeaser settings={settings} />
+      <GuideSection settings={settings} rsvpHref={rsvpHref} responded={!!guest && guest.invitation.rsvpStatus !== 'pending'} />
       <GalleryTeaser approved={approved} publicEnabled={!!album?.publicGalleryEnabled} />
       <FaqSection settings={settings} faqs={faqs} first={schedule[0]} />
       <GuestbookTeaser settings={settings} />
