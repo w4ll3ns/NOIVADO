@@ -2693,6 +2693,21 @@ body:has(.sacola-barra) .site-footer {
   justify-items: center;
   text-align: center;
 }
+.plano-b__detalhe {
+  font-size: var(--fs-tiny);
+  color: var(--ink-soft);
+  text-align: center;
+}
+.plano-b__detalhe summary {
+  cursor: pointer;
+}
+.plano-b__detalhe code {
+  display: block;
+  margin-top: 6px;
+  font-size: 0.75rem;
+  text-align: left;
+  overflow-wrap: anywhere;
+}
 .pix__qr {
   margin: 4px 0 0;
   padding: 10px;

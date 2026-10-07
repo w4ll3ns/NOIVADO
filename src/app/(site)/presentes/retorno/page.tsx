@@ -62,9 +62,10 @@ export default async function GiftReturnPage(props: PageProps<'/presentes/retorn
             <ResumoPedido rows={order.rows} totalCents={order.totalCents} />
             {!order.checkoutUrl && order.provider === 'mercadopago' ? (
               <p style={{ marginTop: 18 }}>
-                <Link className="btn btn--link" href={`/presentes/pagamento/${order.reference}`}>
+                {/* <a>, não <Link>: a página de pagamento precisa carregar inteira (CSP própria). */}
+                <a className="btn btn--link" href={`/presentes/pagamento/${order.reference}`}>
                   Voltar ao pagamento
-                </Link>
+                </a>
               </p>
             ) : null}
             {order.checkoutUrl ? (

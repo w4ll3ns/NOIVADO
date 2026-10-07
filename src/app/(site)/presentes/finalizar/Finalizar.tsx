@@ -49,6 +49,20 @@ export function Finalizar({ presentes, action, defaults, coupleNames }: Props) {
 
   useEffect(() => setMontado(true), [])
 
+  // Pedido criado: abre o pagamento com carregamento completo (ver FinalizarState.ir).
+  const [saindo, setSaindo] = useState(false)
+  useEffect(() => {
+    if (!state.ir) return
+    setSaindo(true)
+    window.location.assign(state.ir)
+  }, [state])
+  // Voltou do pagamento pelo "voltar" do navegador (página restaurada da memória): libera o botão.
+  useEffect(() => {
+    const voltou = (e: PageTransitionEvent) => e.persisted && setSaindo(false)
+    window.addEventListener('pageshow', voltou)
+    return () => window.removeEventListener('pageshow', voltou)
+  }, [])
+
   // O que não está mais disponível sai da lista (ao abrir a página e quando o servidor avisar).
   const indisponiveis = state.indisponiveis
   useEffect(() => {
@@ -155,8 +169,8 @@ export function Finalizar({ presentes, action, defaults, coupleNames }: Props) {
             </p>
           ) : null}
 
-          <button type="submit" className="btn btn--primary btn--block" disabled={pending || pendentes.length > 0}>
-            {pending ? 'Preparando…' : 'Ir para o pagamento'}
+          <button type="submit" className="btn btn--primary btn--block" disabled={pending || saindo || pendentes.length > 0}>
+            {pending || saindo ? 'Preparando…' : 'Ir para o pagamento'}
           </button>
           <p className="privacy-note">
             Um só pagamento para todos os presentes, no ambiente seguro do Mercado Pago: Pix ou cartão de crédito. Não recebemos dados do seu cartão.

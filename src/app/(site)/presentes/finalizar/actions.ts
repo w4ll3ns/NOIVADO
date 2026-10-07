@@ -1,7 +1,6 @@
 'use server'
 
 import { cookies } from 'next/headers'
-import { redirect } from 'next/navigation'
 import { getPublicGifts, ORDER_COOKIE, resolveGiftAmount } from '@/lib/gifts'
 import { getCurrentGuest } from '@/lib/invitations'
 import { getSettings } from '@/lib/settings'
@@ -17,6 +16,12 @@ export type FinalizarState = {
   /** Presentes que não estão mais disponíveis (o cliente tira da lista). */
   indisponiveis?: string[]
   values?: { name: string; email: string; phone: string; message: string }
+  /**
+   * Para onde o navegador vai (página de pagamento do site ou do Mercado Pago). O cliente abre com
+   * carregamento completo: a página de pagamento traz a própria política de segurança (CSP), que
+   * libera o formulário do Mercado Pago; numa navegação interna valeria a da página anterior.
+   */
+  ir?: string
 }
 
 export async function finalizarPresentesAction(_prev: FinalizarState, form: FormData): Promise<FinalizarState> {
@@ -71,7 +76,6 @@ export async function finalizarPresentesAction(_prev: FinalizarState, form: Form
 
   const jar = await cookies()
   const guest = await getCurrentGuest()
-  let redirectUrl: string
   try {
     const res = await startGiftOrder({
       items,
@@ -84,11 +88,10 @@ export async function finalizarPresentesAction(_prev: FinalizarState, form: Form
       replaceOrderId: jar.get(ORDER_COOKIE)?.value ?? null,
     })
     jar.set(ORDER_COOKIE, res.orderId, { httpOnly: true, sameSite: 'lax', secure: env.isProduction, path: '/', maxAge: 60 * 60 * 24 })
-    redirectUrl = res.redirectUrl
+    return { ir: res.redirectUrl, values }
   } catch (err) {
     if (err instanceof PaymentError) return { error: err.message, values }
     console.error(err)
     return { error: 'Não conseguimos iniciar o pagamento agora. Tente novamente em instantes.', values }
   }
-  redirect(redirectUrl)
 }

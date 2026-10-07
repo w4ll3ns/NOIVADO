@@ -7,19 +7,29 @@ const MP_FORM_TARGETS = 'https://*.mercadopago.com.br https://*.mercadopago.com 
  * Só na página de pagamento: o formulário seguro do Mercado Pago (SDK, campos do cartão em iframes,
  * imagens das bandeiras e a API de tokenização) vem destes domínios.
  */
-const MP_CHECKOUT = 'https://*.mercadopago.com https://*.mercadopago.com.br https://*.mercadolibre.com https://*.mercadolivre.com https://*.mlstatic.com'
+const MP_CHECKOUT =
+  'https://*.mercadopago.com https://*.mercadopago.com.br https://*.mercadolibre.com https://*.mercadolivre.com https://*.mercadolivre.com.br https://*.mlstatic.com'
+/**
+ * O formulário do cartão pode injetar scripts próprios e usar eval, o que a política com nonce +
+ * 'strict-dynamic' bloqueia. Na página de pagamento vale a política "sem nonce" do Next
+ * ('unsafe-inline' + lista de domínios). Ela só vale se a página for carregada inteira: os links
+ * para cá usam <a>/location, não navegação interna.
+ */
+const MP_SCRIPTS = `${MP_CHECKOUT} https://applepay.cdn-apple.com https://pay.google.com`
 
 function buildCsp(nonce: string, isDev: boolean, checkout: boolean) {
   const mp = checkout ? ` ${MP_CHECKOUT}` : ''
   return [
     `default-src 'self'`,
-    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'${isDev ? " 'unsafe-eval'" : ''}`,
+    checkout
+      ? `script-src 'self' 'unsafe-inline' 'unsafe-eval' ${MP_SCRIPTS}`
+      : `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'${isDev ? " 'unsafe-eval'" : ''}`,
     `style-src 'self' 'unsafe-inline'${mp}`,
     `img-src 'self' blob: data:${mp}`,
     `font-src 'self'${mp}`,
     `media-src 'self' blob:`,
     `connect-src 'self'${mp}`,
-    ...(checkout ? [`frame-src 'self'${mp}`] : []),
+    ...(checkout ? [`frame-src 'self'${mp} https://pay.google.com`, `worker-src 'self' blob:`] : []),
     `object-src 'none'`,
     `base-uri 'self'`,
     `form-action 'self' ${MP_FORM_TARGETS}`,

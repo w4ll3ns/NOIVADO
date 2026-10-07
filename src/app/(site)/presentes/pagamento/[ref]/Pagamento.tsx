@@ -28,6 +28,14 @@ export function Pagamento(props: Props) {
   const [cartaoAberto, setCartaoAberto] = useState(false)
   const pago = useCallback(() => router.push(`/presentes/retorno?ref=${props.orderRef}`), [router, props.orderRef])
 
+  // A política de segurança (CSP) que libera o formulário do Mercado Pago vem no carregamento desta
+  // página. Chegando por navegação interna (o "voltar" do navegador, por exemplo), valeria a da página
+  // anterior e o cartão não carregaria: recarrega.
+  const transparente = !!props.publicKey
+  useEffect(() => {
+    if (transparente && !carregadaAqui()) window.location.reload()
+  }, [transparente])
+
   if (!props.publicKey) return <PlanoB fallback={props.fallback} motivo={null} />
 
   return (
@@ -268,6 +276,17 @@ declare global {
   }
 }
 
+/** O documento foi carregado nesta página (e não numa anterior, com navegação interna até aqui)? */
+function carregadaAqui() {
+  const nav = performance.getEntriesByType('navigation')[0]
+  if (!nav) return true
+  try {
+    return new URL(nav.name).pathname.startsWith('/presentes/pagamento/')
+  } catch {
+    return true
+  }
+}
+
 /** Carrega um script externo uma única vez (a CSP desta página libera os domínios do Mercado Pago). */
 function carregarScript(src: string, attrs: Record<string, string> = {}) {
   return new Promise<void>((resolve, reject) => {
@@ -291,13 +310,25 @@ function carregarScript(src: string, attrs: Record<string, string> = {}) {
 function PainelCartao({ orderRef, totalCents, publicKey, email, maxInstallments, fallback, onPago }: Props & { onPago: () => void }) {
   const [estado, setEstado] = useState<'carregando' | 'pronto' | 'falhou'>('carregando')
   const [erro, setErro] = useState<string | null>(null)
+  /** Motivo técnico quando o formulário não carrega (aparece discreto no plano B, para diagnóstico). */
+  const [detalhe, setDetalhe] = useState<string | null>(null)
   const [rodada, setRodada] = useState(0)
   const container = `cartao-mp-${rodada}`
 
   useEffect(() => {
     let cancelado = false
+    let pronto = false
     let controle: BrickController | null = null
-    const tempo = window.setTimeout(() => !cancelado && setEstado((e) => (e === 'carregando' ? 'falhou' : e)), 20_000)
+    // O que a política de segurança do navegador bloquear enquanto o formulário carrega.
+    const bloqueios = new Set<string>()
+    const onBloqueio = (e: SecurityPolicyViolationEvent) => bloqueios.add(`${e.effectiveDirective} ${e.blockedURI}`)
+    document.addEventListener('securitypolicyviolation', onBloqueio)
+    const falhar = (motivo: string) => {
+      if (cancelado || pronto) return
+      setDetalhe([motivo, ...bloqueios].join(' · '))
+      setEstado('falhou')
+    }
+    const tempo = window.setTimeout(() => falhar('o formulário demorou mais de 20 s'), 20_000)
     const montar = async () => {
       // Device ID antifraude do Mercado Pago (melhora a aprovação); se falhar, segue sem ele.
       void carregarScript('https://www.mercadopago.com/v2/security.js', { view: 'checkout' }).catch(() => {})
@@ -331,11 +362,14 @@ function PainelCartao({ orderRef, totalCents, publicKey, email, maxInstallments,
           paymentMethods: { maxInstallments },
         },
         callbacks: {
-          onReady: () => !cancelado && setEstado('pronto'),
+          onReady: () => {
+            pronto = true
+            if (!cancelado) setEstado('pronto')
+          },
           onSubmit: (formData: CardFormData) => pagar(formData),
-          onError: (error: { type?: string; message?: string }) => {
+          onError: (error: { type?: string; cause?: string; message?: string }) => {
             console.error('Formulário do Mercado Pago', error)
-            if (error?.type === 'critical' && !cancelado) setEstado('falhou')
+            if (error?.type === 'critical') falhar([error.cause, error.message].filter(Boolean).join(': ') || 'erro do formulário')
           },
         },
       })
@@ -357,11 +391,12 @@ function PainelCartao({ orderRef, totalCents, publicKey, email, maxInstallments,
     }
     montar().catch((err) => {
       console.error(err)
-      if (!cancelado) setEstado('falhou')
+      falhar(err instanceof Error ? err.message : String(err))
     })
     return () => {
       cancelado = true
       window.clearTimeout(tempo)
+      document.removeEventListener('securitypolicyviolation', onBloqueio)
       controle?.unmount()
     }
   }, [container, orderRef, totalCents, publicKey, email, maxInstallments, onPago])
@@ -374,7 +409,7 @@ function PainelCartao({ orderRef, totalCents, publicKey, email, maxInstallments,
         </p>
       ) : null}
       {estado === 'falhou' ? (
-        <PlanoB fallback={fallback} motivo="Não conseguimos carregar o formulário do cartão aqui." />
+        <PlanoB fallback={fallback} motivo="Não conseguimos carregar o formulário do cartão aqui." detalhe={detalhe} />
       ) : (
         <>
           {estado === 'carregando' ? (
@@ -391,7 +426,7 @@ function PainelCartao({ orderRef, totalCents, publicKey, email, maxInstallments,
 }
 
 /** Página do Mercado Pago: quando o pagamento aqui não está disponível. */
-function PlanoB({ fallback, motivo }: { fallback: Props['fallback']; motivo: string | null }) {
+function PlanoB({ fallback, motivo, detalhe }: { fallback: Props['fallback']; motivo: string | null; detalhe?: string | null }) {
   const [state, action, pending] = useActionState<FallbackState>(fallback, {})
   return (
     <form action={action} className="plano-b">
@@ -405,6 +440,12 @@ function PlanoB({ fallback, motivo }: { fallback: Props['fallback']; motivo: str
       <button type="submit" className="btn btn--primary btn--block" disabled={pending}>
         {pending ? 'Abrindo…' : 'Pagar no site do Mercado Pago'}
       </button>
+      {detalhe ? (
+        <details className="plano-b__detalhe">
+          <summary>Detalhes técnicos</summary>
+          <code>{detalhe}</code>
+        </details>
+      ) : null}
     </form>
   )
 }

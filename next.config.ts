@@ -28,6 +28,15 @@ const nextConfig: NextConfig = {
   async headers() {
     return [
       { source: '/:path*', headers: securityHeaders },
+      // Pagamento no site: o formulário do Mercado Pago pode consultar Google Pay/Apple Pay (Payment
+      // Request) e abrir janelas próprias; nas outras páginas isso continua bloqueado.
+      {
+        source: '/presentes/pagamento/:path*',
+        headers: [
+          { key: 'Permissions-Policy', value: 'camera=(self), microphone=(), geolocation=(), payment=(self), usb=()' },
+          { key: 'Cross-Origin-Opener-Policy', value: 'same-origin-allow-popups' },
+        ],
+      },
       {
         source: '/(i|a|admin)/:path*',
         headers: [{ key: 'X-Robots-Tag', value: 'noindex, nofollow' }],
