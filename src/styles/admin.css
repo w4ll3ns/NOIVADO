@@ -905,3 +905,32 @@ a.a-kpi:hover {
     display: none !important;
   }
 }
+
+/* Configurações → Presentes: status do Mercado Pago */
+.mp-card__dados {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+}
+.mp-card__dados > div {
+  display: grid;
+  grid-template-columns: 130px 1fr;
+  gap: 12px;
+  align-items: baseline;
+}
+.mp-card__dados dt {
+  font-weight: 600;
+  color: var(--a-muted);
+}
+.mp-card__dados dd {
+  margin: 0;
+}
+.mp-card code {
+  word-break: break-all;
+}
+@media (max-width: 640px) {
+  .mp-card__dados > div {
+    grid-template-columns: 1fr;
+    gap: 2px;
+  }
+}

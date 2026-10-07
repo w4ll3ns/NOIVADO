@@ -9,11 +9,16 @@ import { availabilityOf, giftCounts, type Gift } from '@/lib/gifts'
 import type { PaymentStatus } from '@/lib/db/schema'
 import {
   createPreference,
+  getAccount,
   getPayment,
+  listPaymentMethods,
   mapMpStatus,
   MercadoPagoError,
+  SAFE_EXCLUDED_TYPES,
   searchPaymentsByReference,
+  typesToExclude,
   type MpPayment,
+  type PreferenceInput,
 } from './mercadopago'
 import { nextStatus } from './transitions'
 
@@ -112,7 +117,7 @@ export async function startGiftOrder(input: OrderInput): Promise<{ orderId: stri
 
   const settings = await getSettings()
   try {
-    const pref = await createPreference(accessToken!, {
+    const pref = await createPreferenceOnlyPixAndCard(accessToken!, {
       externalReference: orderId,
       items: rows.map((row) => {
         const gift = input.items.find((i) => i.gift.id === row.giftId)!.gift
@@ -142,6 +147,84 @@ export async function startGiftOrder(input: OrderInput): Promise<{ orderId: stri
       .set({ status: 'cancelled', statusDetail: 'preference_error', updatedAt: new Date() })
       .where(eq(schema.giftPayments.orderId, orderId))
     throw new PaymentError('Não conseguimos abrir o pagamento agora. Tente novamente em alguns instantes.')
+  }
+}
+
+/** Tipos de pagamento fora do checkout, por conta (consultados no Mercado Pago a cada 6 h). */
+let excludedCache: { token: string; types: string[]; at: number } | null = null
+
+async function excludedTypes(token: string) {
+  if (excludedCache && excludedCache.token === token && Date.now() - excludedCache.at < 6 * 3600_000) return excludedCache.types
+  try {
+    const types = typesToExclude(await listPaymentMethods(token))
+    excludedCache = { token, types, at: Date.now() }
+    return types
+  } catch (err) {
+    console.error('Não foi possível consultar os meios de pagamento da conta; o checkout tira só o boleto.', err)
+    return SAFE_EXCLUDED_TYPES
+  }
+}
+
+/**
+ * Checkout só com Pix e cartão de crédito. Se o Mercado Pago recusar alguma exclusão (400), tenta
+ * de novo com menos exclusões — sem o Mercado Crédito (a menos documentada) e, por fim, só sem o
+ * boleto: o pagamento nunca fica indisponível por causa disso. A que der certo fica guardada.
+ */
+async function createPreferenceOnlyPixAndCard(token: string, input: Omit<PreferenceInput, 'excludedPaymentTypes'>) {
+  const types = await excludedTypes(token)
+  const attempts = [types, types.filter((t) => t !== 'digital_currency'), SAFE_EXCLUDED_TYPES].filter(
+    (set, i, all) => set.length && all.findIndex((o) => o.join() === set.join()) === i,
+  )
+  for (const [i, set] of attempts.entries()) {
+    try {
+      const pref = await createPreference(token, { ...input, excludedPaymentTypes: set }, i ? `${input.externalReference}:${i}` : undefined)
+      if (i) excludedCache = { token, types: set, at: Date.now() }
+      return pref
+    } catch (err) {
+      const last = i === attempts.length - 1
+      if (last || !(err instanceof MercadoPagoError) || err.status !== 400) throw err
+      console.error(`O Mercado Pago recusou excluir ${set.join(', ')}; tentando com menos exclusões.`, err.message)
+    }
+  }
+  throw new PaymentError('Não conseguimos abrir o pagamento agora.')
+}
+
+export type MercadoPagoStatus =
+  | { connected: false; reason: 'sem_token' | 'token_recusado' | 'sem_conexao'; detail?: string }
+  | {
+      connected: true
+      account: { nickname: string | null; email: string | null }
+      production: boolean
+      pix: boolean | null
+      cards: string[]
+      webhookSecret: boolean
+      webhookUrl: string
+      httpsOk: boolean
+    }
+
+/** Para o painel: a qual conta o site está ligado e o que o checkout vai aceitar. */
+export async function mercadoPagoStatus(): Promise<MercadoPagoStatus> {
+  const token = env.mpAccessToken
+  if (!token) return { connected: false, reason: 'sem_token' }
+  let account
+  try {
+    account = await getAccount(token)
+  } catch (err) {
+    if (err instanceof MercadoPagoError && (err.status === 401 || err.status === 403)) {
+      return { connected: false, reason: 'token_recusado' }
+    }
+    return { connected: false, reason: 'sem_conexao', detail: err instanceof Error ? err.message.slice(0, 160) : undefined }
+  }
+  const methods = await listPaymentMethods(token).catch(() => null)
+  return {
+    connected: true,
+    account: { nickname: account.nickname ?? null, email: account.email ?? null },
+    production: token.startsWith('APP_USR-'),
+    pix: methods ? methods.some((m) => m.id === 'pix' && m.status !== 'inactive') : null,
+    cards: methods ? methods.filter((m) => m.payment_type_id === 'credit_card' && m.status !== 'inactive').map((m) => m.name || m.id) : [],
+    webhookSecret: !!env.mpWebhookSecret,
+    webhookUrl: `${env.appUrl}/api/webhooks/mercadopago`,
+    httpsOk: env.appUrl.startsWith('https://'),
   }
 }
 

@@ -57,7 +57,7 @@ export default async function GiftReturnPage(props: PageProps<'/presentes/retorn
             <Divider />
             <p className="result__text">
               Assim que o Mercado Pago confirmar o pagamento, {order.rows.length === 1 ? 'ele aparece' : 'os presentes aparecem'} aqui e no seu
-              convite. Para Pix, isso leva só alguns instantes; boletos podem levar até 3 dias úteis.
+              convite. Pagando o Pix, isso leva só alguns instantes.
             </p>
             <ResumoPedido rows={order.rows} totalCents={order.totalCents} />
             {order.checkoutUrl ? (

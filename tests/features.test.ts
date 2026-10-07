@@ -141,3 +141,39 @@ describe('pedido com vários presentes no Mercado Pago', () => {
     expect(body.payer).toMatchObject({ name: 'Ana', surname: 'Maria Souza' })
   })
 })
+
+describe('checkout só com Pix e cartão de crédito', () => {
+  it('tira do checkout só os tipos que existem na conta (e nunca Pix, crédito ou saldo)', async () => {
+    const { typesToExclude, SAFE_EXCLUDED_TYPES } = await import('@/lib/payments/mercadopago')
+    const m = (id: string, type: string, status = 'active') => ({ id, payment_type_id: type, status })
+    expect(
+      typesToExclude([
+        m('pix', 'bank_transfer'),
+        m('visa', 'credit_card'),
+        m('bolbradesco', 'ticket'),
+        m('debelo', 'debit_card'),
+        m('account_money', 'account_money'),
+        m('consumer_credits', 'digital_currency'),
+        m('velho', 'prepaid_card', 'inactive'),
+      ]),
+    ).toEqual(['ticket', 'debit_card', 'digital_currency'])
+    expect(typesToExclude([])).toEqual(SAFE_EXCLUDED_TYPES)
+  })
+
+  it('datas no fuso de Brasília e Pix vencendo junto com a reserva', async () => {
+    const { buildPreferenceBody, mpDate } = await import('@/lib/payments/mercadopago')
+    expect(mpDate(new Date('2026-10-08T20:30:00.000Z'))).toBe('2026-10-08T17:30:00.000-03:00')
+    const body = buildPreferenceBody({
+      externalReference: 'p',
+      items: [{ id: 'a', title: 'x', amountCents: 100 }],
+      payer: { name: 'Ana', email: 'a@b.c' },
+      appUrl: 'https://x.example',
+      maxInstallments: 6,
+      expiresAt: new Date('2026-10-09T03:00:00.000Z'),
+      excludedPaymentTypes: ['ticket', 'debit_card'],
+    })
+    expect(body.payment_methods).toEqual({ installments: 6, excluded_payment_types: [{ id: 'ticket' }, { id: 'debit_card' }] })
+    expect(body.date_of_expiration).toBe('2026-10-09T00:00:00.000-03:00')
+    expect(body.expiration_date_to).toBe(body.date_of_expiration)
+  })
+})

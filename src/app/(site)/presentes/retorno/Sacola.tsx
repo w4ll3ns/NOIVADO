@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation'
 import { useEffect } from 'react'
 import { esvaziarSacola, substituirSacola, type ItemSacola } from '@/components/gifts/sacola'
 
-/** Pedido pago (ou aguardando Pix/boleto): a lista "Seus presentes" deste aparelho é esvaziada. */
+/** Pedido pago (ou aguardando o Pix): a lista "Seus presentes" deste aparelho é esvaziada. */
 export function EsvaziarSacola() {
   useEffect(() => esvaziarSacola(), [])
   return null

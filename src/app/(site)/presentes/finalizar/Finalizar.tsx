@@ -159,7 +159,7 @@ export function Finalizar({ presentes, action, defaults, coupleNames }: Props) {
             {pending ? 'Preparando…' : 'Ir para o pagamento'}
           </button>
           <p className="privacy-note">
-            Um só pagamento para todos os presentes, no ambiente seguro do Mercado Pago (Pix, cartão ou boleto). Não recebemos dados do seu cartão.
+            Um só pagamento para todos os presentes, no ambiente seguro do Mercado Pago: Pix ou cartão de crédito. Não recebemos dados do seu cartão.
           </p>
         </form>
       </div>

@@ -5,6 +5,7 @@ import { asc } from 'drizzle-orm'
 import { PageHead } from '@/components/admin/ui'
 import { ConfirmSubmit } from '@/components/admin/ClientBits'
 import { MediaPicker } from '@/components/admin/MediaPicker'
+import { MercadoPagoCard } from '../MercadoPagoCard'
 import { requireAdmin, hasRole } from '@/lib/auth/session'
 import { db, schema } from '@/lib/db'
 import { getSettings } from '@/lib/settings'
@@ -129,7 +130,12 @@ const SECTIONS: Section[] = [
     fields: [
       { name: 'enabled', label: 'Lista de presentes ativa', type: 'checkbox', span: true },
       { name: 'intro', label: 'Introdução da lista', type: 'textarea', rows: 4 },
-      { name: 'maxInstallments', label: 'Máximo de parcelas no cartão', type: 'number' },
+      {
+        name: 'maxInstallments',
+        label: 'Máximo de parcelas no cartão de crédito',
+        type: 'number',
+        help: '1 = só à vista. Os juros do parcelamento seguem o que está configurado na sua conta do Mercado Pago.',
+      },
       { name: 'statementDescriptor', label: 'Nome na fatura do cartão (até 13 caracteres)', type: 'text' },
       { name: 'thanksTitle', label: 'Agradecimento — título', type: 'text', span: true },
       { name: 'thanksText', label: 'Agradecimento — texto', type: 'textarea', rows: 3 },
@@ -176,6 +182,7 @@ export default async function SettingsSectionPage(props: PageProps<'/admin/confi
           </Link>
         ))}
       </nav>
+      {section.slug === 'presentes' ? <MercadoPagoCard /> : null}
       {section.key ? (
         <SettingsForm
           action={saveSettingsAction.bind(null, section.key)}

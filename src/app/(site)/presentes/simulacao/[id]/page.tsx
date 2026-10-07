@@ -37,7 +37,7 @@ export default async function SimulationPage(props: PageProps<'/presentes/simula
             Aprovar pagamento
           </button>
           <button className="btn" name="outcome" value="pending">
-            Deixar pendente (Pix/boleto)
+            Deixar pendente (Pix gerado, ainda não pago)
           </button>
           <button className="btn" name="outcome" value="rejected">
             Recusar pagamento

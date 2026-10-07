@@ -22,6 +22,13 @@
       "when": 1790658429565,
       "tag": "0002_presentes_pedido",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1791403711953,
+      "tag": "0003_faq_sem_boleto",
+      "breakpoints": true
     }
   ]
 }

@@ -108,7 +108,7 @@ export const seedFaqs = [
   { question: 'Posso levar acompanhante?', answer: 'Seu convite mostra exatamente quem está convidado. Quando houver acompanhante, o espaço para informar o nome aparecerá na confirmação de presença.' },
   { question: 'Crianças são convidadas?', answer: 'Os nomes que aparecem no seu convite são os das pessoas convidadas. Se tiver qualquer dúvida, fale com a gente.' },
   { question: 'Até quando posso confirmar?', answer: 'Até {{PRAZO_RSVP}}, pelo seu link pessoal. Assim conseguimos preparar tudo com carinho.' },
-  { question: 'Como funciona a lista de presentes?', answer: 'Cada ideia da lista é uma contribuição simbólica, paga de forma segura pelo Mercado Pago (Pix, cartão ou boleto). Assim que o pagamento é confirmado, o presente aparece no seu convite.' },
+  { question: 'Como funciona a lista de presentes?', answer: 'Cada ideia da lista é uma contribuição simbólica, paga de forma segura pelo Mercado Pago (Pix ou cartão de crédito). Assim que o pagamento é confirmado, o presente aparece no seu convite.' },
   { question: 'Posso alterar minha confirmação?', answer: 'Sim! Volte ao seu link pessoal até {{PRAZO_RSVP}} e toque em “Alterar confirmação”.' },
 ]
 

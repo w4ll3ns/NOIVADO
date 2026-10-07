@@ -7,7 +7,16 @@ import { safeEqual } from '@/lib/security/tokens'
  * Nenhum dado de cartão passa pelo nosso servidor: o pagamento acontece no ambiente do MP.
  */
 
-const API = 'https://api.mercadopago.com'
+/** API oficial. MP_API_BASE só serve para testes com um servidor simulado. */
+const API = (process.env.MP_API_BASE || 'https://api.mercadopago.com').replace(/\/+$/, '')
+
+/**
+ * Só Pix e cartão de crédito: estes tipos saem do checkout quando existem na conta.
+ * (Saldo em conta e carteira do Mercado Pago não podem ser excluídos numa preferência.)
+ */
+const NOT_ACCEPTED_TYPES = ['ticket', 'atm', 'debit_card', 'prepaid_card', 'digital_currency']
+/** Boleto: a exclusão documentada, usada quando não dá para consultar os meios da conta. */
+export const SAFE_EXCLUDED_TYPES = ['ticket']
 
 export type MpPayment = {
   id: number
@@ -64,6 +73,14 @@ export type PreferenceInput = {
   maxInstallments: number
   statementDescriptor?: string
   expiresAt: Date
+  /** Tipos de pagamento fora do checkout (padrão: boleto). */
+  excludedPaymentTypes?: string[]
+}
+
+/** Data no formato que o Mercado Pago documenta: 2026-10-20T23:59:59.000-03:00 (horário de Brasília). */
+export function mpDate(d: Date) {
+  const local = new Date(d.getTime() - 3 * 3600_000)
+  return `${local.toISOString().slice(0, 23)}-03:00`
 }
 
 export function buildPreferenceBody(input: PreferenceInput) {
@@ -91,21 +108,47 @@ export function buildPreferenceBody(input: PreferenceInput) {
           notification_url: `${input.appUrl}/api/webhooks/mercadopago?source_news=webhooks`,
         }
       : {}),
-    payment_methods: { installments: input.maxInstallments },
+    payment_methods: {
+      installments: input.maxInstallments,
+      excluded_payment_types: (input.excludedPaymentTypes ?? SAFE_EXCLUDED_TYPES).map((id) => ({ id })),
+    },
     statement_descriptor: input.statementDescriptor?.slice(0, 13) || undefined,
     expires: true,
-    expiration_date_from: new Date().toISOString(),
-    expiration_date_to: input.expiresAt.toISOString(),
+    expiration_date_from: mpDate(new Date()),
+    expiration_date_to: mpDate(input.expiresAt),
+    // Prazo do Pix = fim da reserva dos presentes: depois disso o Mercado Pago não aceita o pagamento.
+    date_of_expiration: mpDate(input.expiresAt),
     binary_mode: false,
   }
 }
 
-export async function createPreference(accessToken: string, input: PreferenceInput): Promise<MpPreference> {
+export async function createPreference(accessToken: string, input: PreferenceInput, idempotencyKey = input.externalReference): Promise<MpPreference> {
   return mpFetch<MpPreference>(accessToken, '/checkout/preferences', {
     method: 'POST',
-    headers: { 'X-Idempotency-Key': input.externalReference },
+    headers: { 'X-Idempotency-Key': idempotencyKey },
     body: JSON.stringify(buildPreferenceBody(input)),
   })
+}
+
+export type MpPaymentMethod = { id: string; name?: string; payment_type_id: string; status?: string }
+
+/** Meios de pagamento disponíveis para a conta do access token. */
+export async function listPaymentMethods(accessToken: string): Promise<MpPaymentMethod[]> {
+  return mpFetch<MpPaymentMethod[]>(accessToken, '/v1/payment_methods')
+}
+
+/** Dos meios da conta, os tipos a tirar do checkout (só existem Pix e cartão de crédito no fim). */
+export function typesToExclude(methods: MpPaymentMethod[]) {
+  const present = new Set(methods.filter((m) => m.status !== 'inactive').map((m) => m.payment_type_id))
+  const types = NOT_ACCEPTED_TYPES.filter((t) => present.has(t))
+  return types.length ? types : SAFE_EXCLUDED_TYPES
+}
+
+export type MpAccount = { id: number; nickname?: string; email?: string; site_id?: string }
+
+/** Dono do access token (para conferir no painel a qual conta o site está ligado). */
+export async function getAccount(accessToken: string): Promise<MpAccount> {
+  return mpFetch<MpAccount>(accessToken, '/users/me')
 }
 
 export async function getPayment(accessToken: string, id: string | number): Promise<MpPayment> {
