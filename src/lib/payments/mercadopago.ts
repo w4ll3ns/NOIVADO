@@ -30,7 +30,10 @@ export type MpPayment = {
   date_created?: string | null
   date_approved?: string | null
   date_last_updated?: string | null
+  date_of_expiration?: string | null
   live_mode?: boolean
+  /** Pix: QR Code e "copia e cola". */
+  point_of_interaction?: { transaction_data?: { qr_code?: string | null; qr_code_base64?: string | null; ticket_url?: string | null } } | null
 }
 
 export type MpPreference = { id: string; init_point: string; sandbox_init_point?: string }
@@ -128,6 +131,126 @@ export async function createPreference(accessToken: string, input: PreferenceInp
     headers: { 'X-Idempotency-Key': idempotencyKey },
     body: JSON.stringify(buildPreferenceBody(input)),
   })
+}
+
+/* ------------------------------------------------------------------ */
+/* Checkout no próprio site (API de pagamentos)                         */
+/* ------------------------------------------------------------------ */
+
+type PaymentCommon = {
+  orderId: string
+  amountCents: number
+  description: string
+  appUrl: string
+  items: { id: string; title: string; amountCents: number }[]
+  payerName: string
+}
+
+function nameParts(name: string) {
+  const [first, ...rest] = name.trim().split(/\s+/)
+  return { first_name: first || undefined, last_name: rest.join(' ') || undefined }
+}
+
+function common(input: PaymentCommon) {
+  const https = input.appUrl.startsWith('https://')
+  return {
+    transaction_amount: Math.round(input.amountCents) / 100,
+    description: input.description.slice(0, 250),
+    external_reference: input.orderId,
+    metadata: { gift_order_id: input.orderId },
+    ...(https ? { notification_url: `${input.appUrl}/api/webhooks/mercadopago?source_news=webhooks` } : {}),
+    additional_info: {
+      items: input.items.map((it) => ({ id: it.id, title: it.title.slice(0, 250), quantity: 1, unit_price: Math.round(it.amountCents) / 100 })),
+      payer: nameParts(input.payerName),
+    },
+  }
+}
+
+/** Pix gerado aqui: o Mercado Pago devolve o QR Code e o "copia e cola". */
+export function buildPixPaymentBody(input: PaymentCommon & { payerEmail: string; cpf: string; expiresAt: Date }) {
+  return {
+    ...common(input),
+    payment_method_id: 'pix',
+    date_of_expiration: mpDate(input.expiresAt),
+    payer: {
+      email: input.payerEmail,
+      ...nameParts(input.payerName),
+      identification: { type: 'CPF', number: input.cpf },
+    },
+  }
+}
+
+/** Cartão de crédito: o token vem do formulário seguro do Mercado Pago (o número do cartão nunca passa por aqui). */
+export function buildCardPaymentBody(
+  input: PaymentCommon & {
+    token: string
+    installments: number
+    paymentMethodId: string
+    issuerId: string | null
+    payer: { email: string; identification: { type: string; number: string } | null }
+    statementDescriptor?: string
+  },
+) {
+  return {
+    ...common(input),
+    token: input.token,
+    installments: input.installments,
+    payment_method_id: input.paymentMethodId,
+    ...(input.issuerId ? { issuer_id: input.issuerId } : {}),
+    payer: { email: input.payer.email, ...nameParts(input.payerName), ...(input.payer.identification ? { identification: input.payer.identification } : {}) },
+    statement_descriptor: input.statementDescriptor?.slice(0, 13) || undefined,
+    // Só aprovado ou recusado (sem "em análise"): o convidado sabe na hora.
+    binary_mode: true,
+  }
+}
+
+export async function createPayment(
+  accessToken: string,
+  body: Record<string, unknown>,
+  opts: { idempotencyKey: string; deviceId?: string | null },
+): Promise<MpPayment> {
+  return mpFetch<MpPayment>(accessToken, '/v1/payments', {
+    method: 'POST',
+    headers: {
+      'X-Idempotency-Key': opts.idempotencyKey,
+      ...(opts.deviceId && /^[A-Za-z0-9_-]{8,200}$/.test(opts.deviceId) ? { 'X-meli-session-id': opts.deviceId } : {}),
+    },
+    body: JSON.stringify(body),
+  })
+}
+
+/** Cancela um pagamento pendente (ex.: o Pix gerado antes de o convidado pagar no cartão). */
+export async function cancelPayment(accessToken: string, id: string | number) {
+  if (!/^\d{1,30}$/.test(String(id))) throw new MercadoPagoError('ID de pagamento inválido')
+  return mpFetch<MpPayment>(accessToken, `/v1/payments/${id}`, { method: 'PUT', body: JSON.stringify({ status: 'cancelled' }) })
+}
+
+/** Cartão recusado: o que dizer ao convidado (status_detail do Mercado Pago). */
+export function cardRejectionMessage(detail?: string | null) {
+  switch (detail) {
+    case 'cc_rejected_bad_filled_card_number':
+      return 'Confira o número do cartão.'
+    case 'cc_rejected_bad_filled_date':
+      return 'Confira a data de validade do cartão.'
+    case 'cc_rejected_bad_filled_security_code':
+      return 'Confira o código de segurança (CVV) do cartão.'
+    case 'cc_rejected_bad_filled_other':
+      return 'Confira os dados do cartão.'
+    case 'cc_rejected_call_for_authorize':
+      return 'O seu banco pediu uma autorização: ligue para o banco, autorize o pagamento e tente de novo.'
+    case 'cc_rejected_card_disabled':
+      return 'Este cartão está desativado. Ative com o banco ou use outro cartão.'
+    case 'cc_rejected_duplicated_payment':
+      return 'Já existe um pagamento igual a este. Se não foi você, tente com outro cartão.'
+    case 'cc_rejected_insufficient_amount':
+      return 'O cartão não tem limite suficiente. Tente outro cartão ou pague com Pix.'
+    case 'cc_rejected_invalid_installments':
+      return 'Este cartão não aceita esse número de parcelas. Escolha outro.'
+    case 'cc_rejected_max_attempts':
+      return 'Muitas tentativas com este cartão. Use outro cartão ou pague com Pix.'
+    default:
+      return 'O pagamento não foi aprovado. Tente outro cartão ou pague com Pix.'
+  }
 }
 
 export type MpPaymentMethod = { id: string; name?: string; payment_type_id: string; status?: string }

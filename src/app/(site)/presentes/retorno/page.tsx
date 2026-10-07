@@ -5,8 +5,8 @@ import { CoupleNames } from '@/components/site/CoupleNames'
 import { getSettings } from '@/lib/settings'
 import { getCurrentGuest } from '@/lib/invitations'
 import { getOrder, syncPaymentWithMp } from '@/lib/payments/service'
-import { formatBRL } from '@/lib/format'
 import { rateLimit } from '@/lib/security/rate-limit'
+import { ResumoPedido } from '@/components/gifts/ResumoPedido'
 import { AutoRefresh } from './AutoRefresh'
 import { EsvaziarSacola, TentarDeNovo } from './Sacola'
 
@@ -60,6 +60,13 @@ export default async function GiftReturnPage(props: PageProps<'/presentes/retorn
               convite. Pagando o Pix, isso leva só alguns instantes.
             </p>
             <ResumoPedido rows={order.rows} totalCents={order.totalCents} />
+            {!order.checkoutUrl && order.provider === 'mercadopago' ? (
+              <p style={{ marginTop: 18 }}>
+                <Link className="btn btn--link" href={`/presentes/pagamento/${order.reference}`}>
+                  Voltar ao pagamento
+                </Link>
+              </p>
+            ) : null}
             {order.checkoutUrl ? (
               <p style={{ marginTop: 18 }}>
                 <a className="btn btn--link" href={order.checkoutUrl}>
@@ -97,25 +104,5 @@ export default async function GiftReturnPage(props: PageProps<'/presentes/retorn
         </div>
       </div>
     </div>
-  )
-}
-
-/** Os presentes do pedido e o total. */
-function ResumoPedido({ rows, totalCents }: { rows: { id: string; giftName: string; amountCents: number }[]; totalCents: number }) {
-  return (
-    <ul className="pedido-resumo">
-      {rows.map((r) => (
-        <li key={r.id}>
-          <span>{r.giftName}</span>
-          <span>{formatBRL(r.amountCents)}</span>
-        </li>
-      ))}
-      {rows.length > 1 ? (
-        <li className="pedido-resumo__total">
-          <span>Total</span>
-          <span>{formatBRL(totalCents)}</span>
-        </li>
-      ) : null}
-    </ul>
   )
 }

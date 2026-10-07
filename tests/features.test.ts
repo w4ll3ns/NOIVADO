@@ -177,3 +177,46 @@ describe('checkout só com Pix e cartão de crédito', () => {
     expect(body.expiration_date_to).toBe(body.date_of_expiration)
   })
 })
+
+describe('pagamento no próprio site', () => {
+  it('valida e formata CPF', async () => {
+    const { isCpf, formatCpf } = await import('@/lib/cpf')
+    expect(isCpf('529.982.247-25')).toBe(true)
+    expect(isCpf('123.456.789-00')).toBe(false)
+    expect(isCpf('111.111.111-11')).toBe(false)
+    expect(formatCpf('52998224725')).toBe('529.982.247-25')
+  })
+
+  it('Pix e cartão saem com o valor do pedido, a referência e os dados certos', async () => {
+    const { buildPixPaymentBody, buildCardPaymentBody, cardRejectionMessage } = await import('@/lib/payments/mercadopago')
+    const base = {
+      orderId: 'pedido-9',
+      amountCents: 53000,
+      description: 'Presentes para Maby & Chris',
+      appUrl: 'https://maby-chris.example',
+      items: [{ id: 'l1', title: 'Kit de vinhos', amountCents: 35000 }],
+      payerName: 'Ana Maria Souza',
+    }
+    const pix = buildPixPaymentBody({ ...base, payerEmail: 'ana@example.com', cpf: '52998224725', expiresAt: new Date('2026-10-08T21:00:00Z') })
+    expect(pix).toMatchObject({
+      transaction_amount: 530,
+      payment_method_id: 'pix',
+      external_reference: 'pedido-9',
+      date_of_expiration: '2026-10-08T18:00:00.000-03:00',
+      notification_url: 'https://maby-chris.example/api/webhooks/mercadopago?source_news=webhooks',
+      payer: { email: 'ana@example.com', first_name: 'Ana', last_name: 'Maria Souza', identification: { type: 'CPF', number: '52998224725' } },
+    })
+    const card = buildCardPaymentBody({
+      ...base,
+      token: 'tok',
+      installments: 3,
+      paymentMethodId: 'visa',
+      issuerId: '25',
+      payer: { email: 'ana@example.com', identification: { type: 'CPF', number: '52998224725' } },
+      statementDescriptor: 'MABYECHRIS',
+    })
+    expect(card).toMatchObject({ transaction_amount: 530, token: 'tok', installments: 3, payment_method_id: 'visa', issuer_id: '25', binary_mode: true })
+    expect(cardRejectionMessage('cc_rejected_insufficient_amount')).toMatch(/limite/)
+    expect(cardRejectionMessage('qualquer')).toMatch(/não foi aprovado/)
+  })
+})

@@ -2611,3 +2611,171 @@ body:has(.sacola-barra) .site-footer {
   color: var(--sepia-deep);
   border-bottom: 0;
 }
+
+/* =========================================================
+   Pagamento no próprio site (Pix e cartão de crédito)
+   ========================================================= */
+.pedido-resumo + .pagamento {
+  margin-top: clamp(24px, 6vw, 36px);
+}
+.pagamento__conteudo {
+  display: grid;
+  gap: 18px;
+}
+.pagamento__texto {
+  margin: 0;
+  text-align: center;
+  font-style: italic;
+  color: var(--ink-soft);
+}
+/* Escolha da forma de pagamento: duas abas com o filete duplo do site */
+.pagamento__metodos {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.pagamento__metodo {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 56px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: rgba(252, 247, 242, 0.6);
+  font-family: var(--font-title);
+  font-weight: 500;
+  font-size: 0.82rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--sepia);
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    background-color var(--dur) var(--ease),
+    color var(--dur) var(--ease);
+}
+.pagamento__metodo svg {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.4;
+  stroke-linejoin: round;
+}
+/* No celular, "Cartão" (o "de crédito" continua para leitores de tela). */
+@media (max-width: 479px) {
+  .pagamento__metodo-extra {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+}
+.pagamento__metodo[aria-selected='true'] {
+  border-color: var(--sepia);
+  background: var(--sepia);
+  color: var(--ivory);
+  box-shadow:
+    inset 0 0 0 3px var(--sepia),
+    inset 0 0 0 4px rgba(252, 247, 242, 0.5);
+}
+.pix-gerar,
+.pix,
+.plano-b {
+  display: grid;
+  gap: 14px;
+}
+.pix {
+  justify-items: center;
+  text-align: center;
+}
+.pix__qr {
+  margin: 4px 0 0;
+  padding: 10px;
+  background: #fff;
+  border: 1px solid var(--line);
+  box-shadow:
+    inset 0 0 0 4px #fff,
+    inset 0 0 0 5px var(--line-soft);
+}
+.pix__qr img {
+  display: block;
+  width: min(220px, 62vw);
+  height: auto;
+  image-rendering: pixelated;
+}
+.pix__valor {
+  margin: 0;
+  font-family: var(--font-title);
+  font-size: 1.6rem;
+  font-weight: 500;
+  color: var(--sepia-deep);
+}
+.pix label {
+  justify-self: stretch;
+  text-align: left;
+}
+.pix__codigo {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: #fffdfa;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.78rem;
+  line-height: 1.45;
+  color: var(--ink);
+  word-break: break-all;
+  resize: none;
+}
+.pix__copiar.is-ok {
+  --btn-bg: #5d6f4b;
+  box-shadow:
+    inset 0 0 0 3px #5d6f4b,
+    inset 0 0 0 4px rgba(252, 247, 242, 0.5);
+  border-color: #5d6f4b;
+}
+.pix__status,
+.cartao__carregando {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin: 4px 0 0;
+  font-family: var(--font-title);
+  font-size: 1.05rem;
+  color: var(--sepia);
+}
+.pix__pulso {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--sepia);
+  animation: pix-pulso 1.4s ease-in-out infinite;
+}
+@keyframes pix-pulso {
+  0%,
+  100% {
+    opacity: 0.25;
+    transform: scale(0.8);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.15);
+  }
+}
+.cartao {
+  display: grid;
+  gap: 12px;
+}
+.cartao__carregando {
+  justify-self: center;
+  font-size: 0.98rem;
+}
+.cartao__brick {
+  min-height: 120px;
+}

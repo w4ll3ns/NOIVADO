@@ -420,7 +420,7 @@ export const paymentEvents = pgTable(
   {
     id: id(),
     paymentId: uuid('payment_id').references(() => giftPayments.id, { onDelete: 'set null' }),
-    source: text('source', { enum: ['webhook', 'return', 'sync', 'admin', 'simulation', 'system'] }).notNull(),
+    source: text('source', { enum: ['webhook', 'return', 'sync', 'admin', 'simulation', 'system', 'checkout'] }).notNull(),
     /** Chave única: garante idempotência no processamento de notificações. */
     dedupeKey: text('dedupe_key').notNull().unique(),
     mpPaymentId: text('mp_payment_id'),

@@ -47,7 +47,22 @@ export async function MercadoPagoCard() {
             </dd>
           </div>
           <div>
-            <dt>No checkout</dt>
+            <dt>Pagamento</dt>
+            <dd>
+              {s.onSite ? (
+                'No próprio site: Pix com QR Code e cartão, sem sair do convite'
+              ) : (
+                <>
+                  Na página do Mercado Pago.{' '}
+                  <span className="a-help">
+                    Para pagar sem sair do site, adicione a Public Key: <code>cd /opt/noivado &amp;&amp; ./scripts/mercadopago.sh</code>
+                  </span>
+                </>
+              )}
+            </dd>
+          </div>
+          <div>
+            <dt>Formas</dt>
             <dd>
               Pix e cartão de crédito
               {s.cards.length ? <span className="a-help"> ({s.cards.slice(0, 6).join(', ')})</span> : null}

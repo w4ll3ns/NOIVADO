@@ -11,7 +11,7 @@ export function EsvaziarSacola() {
 }
 
 /** Pagamento não concluído: volta os mesmos presentes para a lista e abre "Finalizar". */
-export function TentarDeNovo({ itens }: { itens: ItemSacola[] }) {
+export function TentarDeNovo({ itens, rotulo = 'Tentar novamente' }: { itens: ItemSacola[]; rotulo?: string }) {
   const router = useRouter()
   return (
     <button
@@ -22,7 +22,7 @@ export function TentarDeNovo({ itens }: { itens: ItemSacola[] }) {
         router.push('/presentes/finalizar')
       }}
     >
-      Tentar novamente
+      {rotulo}
     </button>
   )
 }

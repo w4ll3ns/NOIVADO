@@ -5,9 +5,14 @@ import { db, schema, type Tx } from '@/lib/db'
 import { env } from '@/lib/env'
 import { getSettings } from '@/lib/settings'
 import { logInvitationEvent } from '@/lib/invitations'
-import { availabilityOf, giftCounts, type Gift } from '@/lib/gifts'
+import { availabilityOf, getPublicGifts, giftCounts, type Gift } from '@/lib/gifts'
 import type { PaymentStatus } from '@/lib/db/schema'
 import {
+  cancelPayment,
+  cardRejectionMessage,
+  buildCardPaymentBody,
+  buildPixPaymentBody,
+  createPayment,
   createPreference,
   getAccount,
   getPayment,
@@ -18,8 +23,10 @@ import {
   searchPaymentsByReference,
   typesToExclude,
   type MpPayment,
+  type MpPaymentMethod,
   type PreferenceInput,
 } from './mercadopago'
+import { cpfDigits, isCpf } from '@/lib/cpf'
 import { nextStatus } from './transitions'
 
 export type GiftPayment = typeof schema.giftPayments.$inferSelect
@@ -57,7 +64,7 @@ export async function startGiftOrder(input: OrderInput): Promise<{ orderId: stri
   if (new Set(input.items.map((i) => i.gift.id)).size !== input.items.length) throw new PaymentError('Há um presente repetido na sua lista.')
 
   const orderId = randomUUID()
-  const rows = await db.transaction(async (tx) => {
+  await db.transaction(async (tx) => {
     const ids = input.items.map((i) => i.gift.id).sort()
     // Trava os presentes (sempre na mesma ordem) para evitar duas reservas simultâneas do último item.
     await tx.execute(sql`select id from gifts where id in (${sql.join(ids.map((id) => sql`${id}`), sql`, `)}) order by id for update`)
@@ -114,32 +121,10 @@ export async function startGiftOrder(input: OrderInput): Promise<{ orderId: stri
   })
 
   if (simulation) return { orderId, redirectUrl: `/presentes/simulacao/${orderId}` }
-
-  const settings = await getSettings()
+  // Com a chave pública: Pix e cartão no próprio site.
+  if (transparentCheckout()) return { orderId, redirectUrl: `/presentes/pagamento/${orderId}` }
   try {
-    const pref = await createPreferenceOnlyPixAndCard(accessToken!, {
-      externalReference: orderId,
-      items: rows.map((row) => {
-        const gift = input.items.find((i) => i.gift.id === row.giftId)!.gift
-        return {
-          id: row.id,
-          title: `Presente para ${settings.event.coupleNames}: ${gift.name}`,
-          description: gift.description,
-          amountCents: row.amountCents,
-        }
-      }),
-      payer: { name: input.payerName, email: input.payerEmail },
-      appUrl: env.appUrl,
-      maxInstallments: settings.gifts.maxInstallments,
-      statementDescriptor: settings.gifts.statementDescriptor,
-      expiresAt: rows[0].expiresAt!,
-    })
-    const url = process.env.MP_USE_SANDBOX === 'true' && pref.sandbox_init_point ? pref.sandbox_init_point : pref.init_point
-    await db
-      .update(schema.giftPayments)
-      .set({ mpPreferenceId: pref.id, checkoutUrl: url, updatedAt: new Date() })
-      .where(eq(schema.giftPayments.orderId, orderId))
-    return { orderId, redirectUrl: url }
+    return { orderId, redirectUrl: await checkoutProUrl(orderId) }
   } catch (err) {
     console.error('Falha ao criar preferência no Mercado Pago', err)
     await db
@@ -150,19 +135,209 @@ export async function startGiftOrder(input: OrderInput): Promise<{ orderId: stri
   }
 }
 
+/** Pagamento no próprio site (Checkout Transparente): precisa do access token e da chave pública. */
+export function transparentCheckout() {
+  return !!env.mpAccessToken && !!env.mpPublicKey && !env.paymentsSimulation
+}
+
+/** Checkout Pro (página do Mercado Pago) para um pedido já criado; reaproveita a preferência se houver. */
+export async function checkoutProUrl(ref: string) {
+  const token = env.mpAccessToken
+  if (!token) throw new PaymentError('Os presentes estarão disponíveis em breve. Tente novamente mais tarde.')
+  const order = await getOrder(ref)
+  if (!order) throw new PaymentError('Não encontramos este pedido.')
+  if (order.checkoutUrl && order.rows[0].mpPreferenceId) return order.checkoutUrl
+  const settings = await getSettings()
+  const first = order.rows[0]
+  const pref = await createPreferenceOnlyPixAndCard(token, {
+    externalReference: order.reference,
+    items: order.rows.map((row) => ({
+      id: row.id,
+      title: `Presente para ${settings.event.coupleNames}: ${row.giftName}`,
+      amountCents: row.amountCents,
+    })),
+    payer: { name: first.payerName, email: first.payerEmail },
+    appUrl: env.appUrl,
+    maxInstallments: settings.gifts.maxInstallments,
+    statementDescriptor: settings.gifts.statementDescriptor,
+    expiresAt: first.expiresAt ?? new Date(Date.now() + PREFERENCE_HOURS * 3600_000),
+  })
+  const url = process.env.MP_USE_SANDBOX === 'true' && pref.sandbox_init_point ? pref.sandbox_init_point : pref.init_point
+  await db
+    .update(schema.giftPayments)
+    .set({ mpPreferenceId: pref.id, checkoutUrl: url, updatedAt: new Date() })
+    .where(inArray(schema.giftPayments.id, order.rows.map((r) => r.id)))
+  return url
+}
+
+/* ------------------------------------------------------------------ */
+/* Checkout no próprio site: Pix e cartão de crédito                    */
+/* ------------------------------------------------------------------ */
+
+/** Quanto tempo o QR Code do Pix vale (o presente fica reservado enquanto isso). */
+const PIX_MINUTES = 30
+
+/**
+ * O pedido pode receber um pagamento agora? Se a tentativa anterior foi recusada ou o Pix
+ * expirou, a reserva foi liberada: confere se os presentes ainda estão disponíveis.
+ */
+export async function orderReadyToPay(ref: string): Promise<GiftOrder> {
+  const order = await getOrder(ref)
+  if (!order || order.provider !== 'mercadopago') throw new PaymentError('Não encontramos este pedido.')
+  const first = order.rows[0]
+  if (order.status === 'approved') throw new PaymentError('Este pedido já foi pago. Obrigado pelo carinho!')
+  if (order.status === 'refunded') throw new PaymentError('Este pedido foi estornado. Para presentear de novo, volte à lista.')
+  if (order.status === 'cancelled' && (first.statusDetail === 'replaced_by_new_order' || first.statusDetail === 'preference_error')) {
+    throw new PaymentError('Este pedido foi substituído por um mais novo. Volte à lista de presentes.')
+  }
+  if (first.expiresAt && first.expiresAt.getTime() < Date.now()) {
+    throw new PaymentError('O prazo deste pedido terminou. Volte à lista e escolha os presentes de novo.')
+  }
+  if (order.status !== 'awaiting') {
+    const gifts = await getPublicGifts(order.rows.map((r) => r.giftId))
+    const taken = order.rows.find((r) => !gifts.some((g) => g.id === r.giftId && g.avail.available))
+    if (taken) throw new PaymentError(`“${taken.giftName}” foi escolhido por outra pessoa enquanto isso. Volte à lista para escolher de novo.`)
+  }
+  return order
+}
+
+export type PixView = { qrCode: string; qrBase64: string | null; ticketUrl: string | null; expiresAt: string | null }
+
+function pixView(mp: MpPayment): PixView | null {
+  const t = mp.point_of_interaction?.transaction_data
+  if (!t?.qr_code) return null
+  return { qrCode: t.qr_code, qrBase64: t.qr_code_base64 ?? null, ticketUrl: t.ticket_url ?? null, expiresAt: mp.date_of_expiration ?? null }
+}
+
+/** O Pix deste pedido que ainda pode ser pago (para mostrar o mesmo QR Code ao voltar à página). */
+export async function currentPix(order: GiftOrder): Promise<PixView | null> {
+  const token = env.mpAccessToken
+  const first = order.rows[0]
+  if (!token || order.status !== 'awaiting' || !first.mpPaymentId || first.paymentMethod !== 'pix') return null
+  const mp = await getPayment(token, first.mpPaymentId).catch(() => null)
+  if (!mp || mp.status !== 'pending') return null
+  const view = pixView(mp)
+  if (!view || (view.expiresAt && new Date(view.expiresAt).getTime() < Date.now() + 60_000)) return null
+  return view
+}
+
+/** Gera o Pix do pedido (ou devolve o que ainda vale). */
+export async function payOrderWithPix(ref: string, cpfInput: string): Promise<PixView> {
+  const token = env.mpAccessToken
+  if (!token) throw new PaymentError('Os presentes estarão disponíveis em breve.')
+  const cpf = cpfDigits(cpfInput)
+  if (!isCpf(cpf)) throw new PaymentError('Confira o CPF: o Mercado Pago pede o CPF de quem paga o Pix.')
+  const order = await orderReadyToPay(ref)
+  const existing = await currentPix(order)
+  if (existing) return existing
+  const first = order.rows[0]
+  const limit = first.expiresAt?.getTime() ?? Infinity
+  const expiresAt = new Date(Math.min(Date.now() + PIX_MINUTES * 60_000, limit))
+  if (expiresAt.getTime() - Date.now() < 5 * 60_000) {
+    throw new PaymentError('O prazo deste pedido está terminando. Volte à lista e escolha os presentes de novo.')
+  }
+  const settings = await getSettings()
+  const mp = await createPayment(
+    token,
+    buildPixPaymentBody({
+      orderId: order.reference,
+      amountCents: order.totalCents,
+      description: `Presentes para ${settings.event.coupleNames}`,
+      appUrl: env.appUrl,
+      items: order.rows.map((r) => ({ id: r.id, title: r.giftName, amountCents: r.amountCents })),
+      payerName: first.payerName,
+      payerEmail: first.payerEmail,
+      cpf,
+      expiresAt,
+    }),
+    { idempotencyKey: `${order.reference}:pix:${Date.now()}` },
+  )
+  await applyMpPayment(mp, 'checkout')
+  const view = pixView(mp)
+  if (!view) throw new PaymentError('O Mercado Pago não devolveu o código Pix. Tente de novo em instantes.')
+  return view
+}
+
+export type CardInput = {
+  token: string
+  paymentMethodId: string
+  issuerId: string | null
+  installments: number
+  email: string
+  identification: { type: string; number: string } | null
+  deviceId: string | null
+  /** Identifica a tentativa (evita cobrar duas vezes se o mesmo envio chegar repetido). */
+  attempt: string
+}
+
+/** Paga o pedido com o cartão de crédito tokenizado pelo formulário seguro do Mercado Pago. */
+export async function payOrderWithCard(ref: string, input: CardInput): Promise<{ status: PaymentStatus; message: string | null }> {
+  const token = env.mpAccessToken
+  if (!token) throw new PaymentError('Os presentes estarão disponíveis em breve.')
+  const order = await orderReadyToPay(ref)
+  const settings = await getSettings()
+  if (!Number.isInteger(input.installments) || input.installments < 1 || input.installments > settings.gifts.maxInstallments) {
+    throw new PaymentError(`Escolha de 1 a ${settings.gifts.maxInstallments} parcelas.`)
+  }
+  const methods = await paymentMethodsCached(token)
+  const method = methods?.find((m) => m.id === input.paymentMethodId)
+  if (methods && method?.payment_type_id !== 'credit_card') {
+    throw new PaymentError('Use um cartão de crédito (ou pague com Pix).')
+  }
+  const previous = order.rows[0]
+  const mp = await createPayment(
+    token,
+    buildCardPaymentBody({
+      orderId: order.reference,
+      amountCents: order.totalCents,
+      description: `Presentes para ${settings.event.coupleNames}`,
+      appUrl: env.appUrl,
+      items: order.rows.map((r) => ({ id: r.id, title: r.giftName, amountCents: r.amountCents })),
+      payerName: previous.payerName,
+      token: input.token,
+      installments: input.installments,
+      paymentMethodId: input.paymentMethodId,
+      issuerId: input.issuerId,
+      payer: { email: input.email || previous.payerEmail, identification: input.identification },
+      statementDescriptor: settings.gifts.statementDescriptor,
+    }),
+    { idempotencyKey: `${order.reference}:card:${input.attempt}`, deviceId: input.deviceId },
+  )
+  await applyMpPayment(mp, 'checkout')
+  const status = mapMpStatus(mp.status, mp.status_detail)
+  // Pago no cartão: o Pix que tinha sido gerado para o mesmo pedido não vale mais.
+  if (status === 'approved' && previous.mpPaymentId && previous.paymentMethod === 'pix' && previous.mpPaymentId !== String(mp.id)) {
+    await cancelPayment(token, previous.mpPaymentId).catch((err) => console.error('Não foi possível cancelar o Pix anterior', err))
+  }
+  return { status, message: status === 'rejected' ? cardRejectionMessage(mp.status_detail) : null }
+}
+
+/** Meios de pagamento da conta (cache de 6 h); null se não der para consultar. */
+let methodsCache: { token: string; methods: MpPaymentMethod[]; at: number } | null = null
+async function paymentMethodsCached(token: string) {
+  if (methodsCache && methodsCache.token === token && Date.now() - methodsCache.at < 6 * 3600_000) return methodsCache.methods
+  try {
+    const methods = await listPaymentMethods(token)
+    methodsCache = { token, methods, at: Date.now() }
+    return methods
+  } catch {
+    return null
+  }
+}
+
 /** Tipos de pagamento fora do checkout, por conta (consultados no Mercado Pago a cada 6 h). */
 let excludedCache: { token: string; types: string[]; at: number } | null = null
 
 async function excludedTypes(token: string) {
   if (excludedCache && excludedCache.token === token && Date.now() - excludedCache.at < 6 * 3600_000) return excludedCache.types
-  try {
-    const types = typesToExclude(await listPaymentMethods(token))
-    excludedCache = { token, types, at: Date.now() }
-    return types
-  } catch (err) {
-    console.error('Não foi possível consultar os meios de pagamento da conta; o checkout tira só o boleto.', err)
+  const methods = await paymentMethodsCached(token)
+  if (!methods) {
+    console.error('Não foi possível consultar os meios de pagamento da conta; o checkout tira só o boleto.')
     return SAFE_EXCLUDED_TYPES
   }
+  const types = typesToExclude(methods)
+  excludedCache = { token, types, at: Date.now() }
+  return types
 }
 
 /**
@@ -200,6 +375,8 @@ export type MercadoPagoStatus =
       webhookSecret: boolean
       webhookUrl: string
       httpsOk: boolean
+      /** Com a Public Key de produção: pagamento no próprio site. */
+      onSite: boolean
     }
 
 /** Para o painel: a qual conta o site está ligado e o que o checkout vai aceitar. */
@@ -225,6 +402,7 @@ export async function mercadoPagoStatus(): Promise<MercadoPagoStatus> {
     webhookSecret: !!env.mpWebhookSecret,
     webhookUrl: `${env.appUrl}/api/webhooks/mercadopago`,
     httpsOk: env.appUrl.startsWith('https://'),
+    onSite: transparentCheckout(),
   }
 }
 
@@ -250,7 +428,7 @@ async function rowsOfReference(ref: string, executor: Tx | typeof db = db, lock 
  * a todas as linhas do pedido. Idempotente: cada combinação (pagamento, status, detalhe,
  * atualização) é processada uma única vez.
  */
-export async function applyMpPayment(mp: MpPayment, source: 'webhook' | 'return' | 'sync' | 'simulation') {
+export async function applyMpPayment(mp: MpPayment, source: 'webhook' | 'return' | 'sync' | 'simulation' | 'checkout') {
   const ref = mp.external_reference
   if (!ref || !UUID.test(ref)) return { handled: false, reason: 'external_reference ausente' }
   const mpId = String(mp.id)
