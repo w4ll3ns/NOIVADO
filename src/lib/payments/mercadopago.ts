@@ -144,6 +144,8 @@ type PaymentCommon = {
   appUrl: string
   items: { id: string; title: string; amountCents: number }[]
   payerName: string
+  /** Só dígitos, com o 55 do Brasil (normalizePhone); ajuda o antifraude a aprovar o cartão. */
+  payerPhone?: string | null
 }
 
 function nameParts(name: string) {
@@ -151,17 +153,32 @@ function nameParts(name: string) {
   return { first_name: first || undefined, last_name: rest.join(' ') || undefined }
 }
 
+/** "5598999999999" → { area_code: "98", number: "999999999" } (só telefones do Brasil). */
+function phoneParts(phone?: string | null) {
+  const m = phone?.match(/^55(\d{2})(\d{8,9})$/)
+  return m ? { area_code: m[1], number: m[2] } : undefined
+}
+
 function common(input: PaymentCommon) {
   const https = input.appUrl.startsWith('https://')
+  const phone = phoneParts(input.payerPhone)
   return {
     transaction_amount: Math.round(input.amountCents) / 100,
     description: input.description.slice(0, 250),
     external_reference: input.orderId,
     metadata: { gift_order_id: input.orderId },
     ...(https ? { notification_url: `${input.appUrl}/api/webhooks/mercadopago?source_news=webhooks` } : {}),
+    // Quanto mais completo, mais o antifraude do Mercado Pago aprova (itens, categoria, comprador).
     additional_info: {
-      items: input.items.map((it) => ({ id: it.id, title: it.title.slice(0, 250), quantity: 1, unit_price: Math.round(it.amountCents) / 100 })),
-      payer: nameParts(input.payerName),
+      items: input.items.map((it) => ({
+        id: it.id,
+        title: it.title.slice(0, 250),
+        description: it.title.slice(0, 250),
+        category_id: 'others',
+        quantity: 1,
+        unit_price: Math.round(it.amountCents) / 100,
+      })),
+      payer: { ...nameParts(input.payerName), ...(phone ? { phone } : {}) },
     },
   }
 }
@@ -199,8 +216,9 @@ export function buildCardPaymentBody(
     ...(input.issuerId ? { issuer_id: input.issuerId } : {}),
     payer: { email: input.payer.email, ...nameParts(input.payerName), ...(input.payer.identification ? { identification: input.payer.identification } : {}) },
     statement_descriptor: input.statementDescriptor?.slice(0, 13) || undefined,
-    // Só aprovado ou recusado (sem "em análise"): o convidado sabe na hora.
-    binary_mode: true,
+    // Sem modo binário: o que o Mercado Pago quiser analisar fica "em análise" (o convidado vê
+    // "aguardando a confirmação") em vez de ser recusado na hora — o modo binário reduz a aprovação.
+    binary_mode: false,
   }
 }
 
@@ -225,32 +243,89 @@ export async function cancelPayment(accessToken: string, id: string | number) {
   return mpFetch<MpPayment>(accessToken, `/v1/payments/${id}`, { method: 'PUT', body: JSON.stringify({ status: 'cancelled' }) })
 }
 
-/** Cartão recusado: o que dizer ao convidado (status_detail do Mercado Pago). */
+/**
+ * Motivos de recusa do cartão (status_detail do Mercado Pago): o que dizer ao convidado e o resumo
+ * que aparece no painel, em Pagamentos.
+ */
+const REJECTIONS: Record<string, { guest: string; admin: string }> = {
+  cc_rejected_bad_filled_card_number: { guest: 'Confira o número do cartão.', admin: 'número do cartão errado' },
+  cc_rejected_bad_filled_date: { guest: 'Confira a data de validade do cartão.', admin: 'validade errada' },
+  cc_rejected_bad_filled_security_code: { guest: 'Confira o código de segurança (CVV) do cartão.', admin: 'CVV errado' },
+  cc_rejected_bad_filled_other: { guest: 'Confira os dados do cartão.', admin: 'dados do cartão errados' },
+  cc_rejected_call_for_authorize: {
+    guest: 'O seu banco pediu uma autorização: ligue para o banco, autorize o pagamento e tente de novo.',
+    admin: 'o banco pediu autorização ao titular',
+  },
+  cc_rejected_card_disabled: { guest: 'Este cartão está desativado. Ative com o banco ou use outro cartão.', admin: 'cartão desativado' },
+  cc_rejected_duplicated_payment: {
+    guest: 'Já existe um pagamento igual a este. Se não foi você, tente com outro cartão.',
+    admin: 'pagamento duplicado',
+  },
+  cc_rejected_insufficient_amount: {
+    guest: 'O cartão não tem limite suficiente. Tente outro cartão ou pague com Pix.',
+    admin: 'limite insuficiente',
+  },
+  cc_rejected_invalid_installments: {
+    guest: 'Este cartão não aceita esse número de parcelas. Escolha outro.',
+    admin: 'parcelas não aceitas pelo cartão',
+  },
+  cc_rejected_max_attempts: { guest: 'Muitas tentativas com este cartão. Use outro cartão ou pague com Pix.', admin: 'tentativas demais' },
+  cc_rejected_high_risk: {
+    guest: 'O Mercado Pago não aprovou este pagamento por segurança. Tente outro cartão ou pague com Pix.',
+    admin: 'antifraude do Mercado Pago (alto risco)',
+  },
+  cc_rejected_blacklist: { guest: 'Este cartão não pode ser usado. Tente outro cartão ou pague com Pix.', admin: 'cartão bloqueado no Mercado Pago' },
+  cc_rejected_other_reason: {
+    guest: 'O banco do cartão recusou o pagamento. Tente outro cartão, fale com o banco ou pague com Pix.',
+    admin: 'recusado pelo banco do cartão',
+  },
+  cc_rejected_by_bank: {
+    guest: 'O banco do cartão recusou o pagamento. Tente outro cartão, fale com o banco ou pague com Pix.',
+    admin: 'recusado pelo banco do cartão',
+  },
+  cc_rejected_card_error: { guest: 'O cartão não conseguiu processar o pagamento. Tente de novo ou use outro cartão.', admin: 'erro no cartão' },
+  cc_rejected_3ds_mandatory: {
+    guest: 'O banco do cartão exigiu uma verificação extra. Tente outro cartão ou pague com Pix.',
+    admin: 'o banco exigiu 3DS (verificação extra)',
+  },
+  cc_rejected_3ds_challenge: {
+    guest: 'A verificação do banco não foi concluída. Tente de novo, use outro cartão ou pague com Pix.',
+    admin: 'verificação 3DS não concluída',
+  },
+  cc_amount_rate_limit_exceeded: {
+    guest: 'O cartão atingiu o limite para este tipo de compra. Tente outro cartão ou pague com Pix.',
+    admin: 'limite do meio de pagamento atingido',
+  },
+  cc_rejected_insufficient_data: {
+    guest: 'Faltaram dados para aprovar. Confira o nome e o CPF do titular e tente de novo.',
+    admin: 'dados do titular insuficientes',
+  },
+  rejected_insufficient_data: {
+    guest: 'Faltaram dados para aprovar. Confira o nome e o CPF do titular e tente de novo.',
+    admin: 'dados do titular insuficientes',
+  },
+  cc_rejected_card_type_not_allowed: { guest: 'Este tipo de cartão não é aceito. Use um cartão de crédito.', admin: 'tipo de cartão não aceito' },
+  rejected_by_bank: {
+    guest: 'O banco do cartão recusou o pagamento. Tente outro cartão, fale com o banco ou pague com Pix.',
+    admin: 'recusado pelo banco do cartão',
+  },
+  rejected_high_risk: {
+    guest: 'O Mercado Pago não aprovou este pagamento por segurança. Tente outro cartão ou pague com Pix.',
+    admin: 'antifraude do Mercado Pago (alto risco)',
+  },
+  rejected_by_regulations: { guest: 'O pagamento foi recusado pelas regras do Mercado Pago. Pague com Pix.', admin: 'regras do Mercado Pago' },
+}
+
+/** Cartão recusado: o que dizer ao convidado. */
 export function cardRejectionMessage(detail?: string | null) {
-  switch (detail) {
-    case 'cc_rejected_bad_filled_card_number':
-      return 'Confira o número do cartão.'
-    case 'cc_rejected_bad_filled_date':
-      return 'Confira a data de validade do cartão.'
-    case 'cc_rejected_bad_filled_security_code':
-      return 'Confira o código de segurança (CVV) do cartão.'
-    case 'cc_rejected_bad_filled_other':
-      return 'Confira os dados do cartão.'
-    case 'cc_rejected_call_for_authorize':
-      return 'O seu banco pediu uma autorização: ligue para o banco, autorize o pagamento e tente de novo.'
-    case 'cc_rejected_card_disabled':
-      return 'Este cartão está desativado. Ative com o banco ou use outro cartão.'
-    case 'cc_rejected_duplicated_payment':
-      return 'Já existe um pagamento igual a este. Se não foi você, tente com outro cartão.'
-    case 'cc_rejected_insufficient_amount':
-      return 'O cartão não tem limite suficiente. Tente outro cartão ou pague com Pix.'
-    case 'cc_rejected_invalid_installments':
-      return 'Este cartão não aceita esse número de parcelas. Escolha outro.'
-    case 'cc_rejected_max_attempts':
-      return 'Muitas tentativas com este cartão. Use outro cartão ou pague com Pix.'
-    default:
-      return 'O pagamento não foi aprovado. Tente outro cartão ou pague com Pix.'
-  }
+  return (detail && REJECTIONS[detail]?.guest) || 'O pagamento não foi aprovado. Tente outro cartão ou pague com Pix.'
+}
+
+/** Cartão recusado: o motivo no painel (com o código do Mercado Pago, para conferir lá). */
+export function rejectionReason(detail?: string | null) {
+  if (!detail) return null
+  const known = REJECTIONS[detail]?.admin
+  return known ? `${known} (${detail})` : detail
 }
 
 export type MpPaymentMethod = { id: string; name?: string; payment_type_id: string; status?: string }

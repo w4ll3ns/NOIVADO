@@ -7,7 +7,8 @@ const securityHeaders = [
   { key: 'X-Frame-Options', value: 'DENY' },
   // Tokens de convite nunca vazam para outros sites via Referer.
   { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
-  { key: 'Permissions-Policy', value: 'camera=(self), microphone=(), geolocation=(), payment=(), usb=()' },
+  // payment=(self): o formulário do Mercado Pago roda num iframe do próprio site (modal de pagamento).
+  { key: 'Permissions-Policy', value: 'camera=(self), microphone=(), geolocation=(), payment=(self), usb=()' },
   { key: 'Cross-Origin-Opener-Policy', value: 'same-origin' },
   ...(isProd ? [{ key: 'Strict-Transport-Security', value: 'max-age=63072000; includeSubDomains' }] : []),
 ]
@@ -28,13 +29,17 @@ const nextConfig: NextConfig = {
   async headers() {
     return [
       { source: '/:path*', headers: securityHeaders },
-      // Pagamento no site: o formulário do Mercado Pago pode consultar Google Pay/Apple Pay (Payment
-      // Request) e abrir janelas próprias; nas outras páginas isso continua bloqueado.
+      // Pagamento no site: o formulário do Mercado Pago pode abrir janelas próprias.
       {
         source: '/presentes/pagamento/:path*',
+        headers: [{ key: 'Cross-Origin-Opener-Policy', value: 'same-origin-allow-popups' }],
+      },
+      // Modal de pagamento: a página vai num iframe do próprio site.
+      {
+        source: '/pagar/:path*',
         headers: [
-          { key: 'Permissions-Policy', value: 'camera=(self), microphone=(), geolocation=(), payment=(self), usb=()' },
-          { key: 'Cross-Origin-Opener-Policy', value: 'same-origin-allow-popups' },
+          { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
+          { key: 'X-Robots-Tag', value: 'noindex, nofollow' },
         ],
       },
       {

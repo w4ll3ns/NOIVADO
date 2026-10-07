@@ -57,7 +57,10 @@ export default async function GiftReturnPage(props: PageProps<'/presentes/retorn
             <Divider />
             <p className="result__text">
               Assim que o Mercado Pago confirmar o pagamento, {order.rows.length === 1 ? 'ele aparece' : 'os presentes aparecem'} aqui e no seu
-              convite. Pagando o Pix, isso leva só alguns instantes.
+              convite.{' '}
+              {order.rows[0].paymentType === 'credit_card'
+                ? 'O pagamento no cartão está em análise pelo Mercado Pago: costuma levar alguns minutos (às vezes até 2 dias úteis).'
+                : 'Pagando o Pix, isso leva só alguns instantes.'}
             </p>
             <ResumoPedido rows={order.rows} totalCents={order.totalCents} />
             {!order.checkoutUrl && order.provider === 'mercadopago' ? (

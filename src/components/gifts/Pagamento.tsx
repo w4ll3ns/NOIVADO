@@ -5,7 +5,7 @@ import { useActionState, useCallback, useEffect, useRef, useState } from 'react'
 import { formatBRL } from '@/lib/format'
 import { formatCpf, isCpf } from '@/lib/cpf'
 import type { PixView } from '@/lib/payments/service'
-import type { FallbackState } from './actions'
+import type { FallbackState } from './planoB'
 
 type Props = {
   orderRef: string
@@ -17,6 +17,15 @@ type Props = {
   pixAtual: PixView | null
   tentativaRecusada: boolean
   fallback: (prev: FallbackState) => Promise<FallbackState>
+  /** Dentro do modal do "Finalizar presentes" (iframe): avisa a página de fora em vez de navegar. */
+  embed?: boolean
+}
+
+/** Mensagens do iframe do pagamento para a página do "Finalizar presentes". */
+export type MensagemPagamento = { tipo: 'mc-pago'; ref: string } | { tipo: 'mc-fechar' }
+
+export function avisarPagina(msg: MensagemPagamento) {
+  window.parent.postMessage(msg, window.location.origin)
 }
 
 type Metodo = 'pix' | 'cartao'
@@ -26,7 +35,11 @@ export function Pagamento(props: Props) {
   const [metodo, setMetodo] = useState<Metodo>('pix')
   /** O formulário do Mercado Pago só carrega quando o convidado escolhe cartão (e continua montado). */
   const [cartaoAberto, setCartaoAberto] = useState(false)
-  const pago = useCallback(() => router.push(`/presentes/retorno?ref=${props.orderRef}`), [router, props.orderRef])
+  const { embed, orderRef } = props
+  const pago = useCallback(() => {
+    if (embed) avisarPagina({ tipo: 'mc-pago', ref: orderRef })
+    else router.push(`/presentes/retorno?ref=${orderRef}`)
+  }, [router, orderRef, embed])
 
   // A política de segurança (CSP) que libera o formulário do Mercado Pago vem no carregamento desta
   // página. Chegando por navegação interna (o "voltar" do navegador, por exemplo), valeria a da página
@@ -281,7 +294,7 @@ function carregadaAqui() {
   const nav = performance.getEntriesByType('navigation')[0]
   if (!nav) return true
   try {
-    return new URL(nav.name).pathname.startsWith('/presentes/pagamento/')
+    return new URL(nav.name).pathname === window.location.pathname
   } catch {
     return true
   }
@@ -339,6 +352,7 @@ function PainelCartao({ orderRef, totalCents, publicKey, email, maxInstallments,
         initialization: { amount: totalCents / 100, payer: { email } },
         customization: {
           visual: {
+            texts: { formTitle: 'Dados do cartão', formSubmit: `Pagar ${formatBRL(totalCents)}` },
             style: {
               theme: 'default',
               customVariables: {
@@ -359,7 +373,8 @@ function PainelCartao({ orderRef, totalCents, publicKey, email, maxInstallments,
               },
             },
           },
-          paymentMethods: { maxInstallments },
+          // Só crédito (o servidor também confere); parcelas até o máximo do painel.
+          paymentMethods: { maxInstallments, types: { excluded: ['debit_card'] } },
         },
         callbacks: {
           onReady: () => {
@@ -412,6 +427,9 @@ function PainelCartao({ orderRef, totalCents, publicKey, email, maxInstallments,
         <PlanoB fallback={fallback} motivo="Não conseguimos carregar o formulário do cartão aqui." detalhe={detalhe} />
       ) : (
         <>
+          {estado === 'pronto' && maxInstallments > 1 ? (
+            <p className="cartao__dica">Em até {maxInstallments}x: as parcelas aparecem depois que você digita o número do cartão.</p>
+          ) : null}
           {estado === 'carregando' ? (
             <p className="cartao__carregando" role="status">
               <span className="pix__pulso" aria-hidden="true" />
@@ -428,6 +446,10 @@ function PainelCartao({ orderRef, totalCents, publicKey, email, maxInstallments,
 /** Página do Mercado Pago: quando o pagamento aqui não está disponível. */
 function PlanoB({ fallback, motivo, detalhe }: { fallback: Props['fallback']; motivo: string | null; detalhe?: string | null }) {
   const [state, action, pending] = useActionState<FallbackState>(fallback, {})
+  // A página do Mercado Pago abre na janela inteira (de dentro do modal, sai do iframe).
+  useEffect(() => {
+    if (state.url) (window.top ?? window).location.assign(state.url)
+  }, [state])
   return (
     <form action={action} className="plano-b">
       {motivo ? <p className="pagamento__texto">{motivo}</p> : null}
@@ -437,8 +459,8 @@ function PlanoB({ fallback, motivo, detalhe }: { fallback: Props['fallback']; mo
           {state.error}
         </p>
       ) : null}
-      <button type="submit" className="btn btn--primary btn--block" disabled={pending}>
-        {pending ? 'Abrindo…' : 'Pagar no site do Mercado Pago'}
+      <button type="submit" className="btn btn--primary btn--block" disabled={pending || !!state.url}>
+        {pending || state.url ? 'Abrindo…' : 'Pagar no site do Mercado Pago'}
       </button>
       {detalhe ? (
         <details className="plano-b__detalhe">

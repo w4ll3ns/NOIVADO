@@ -188,7 +188,7 @@ describe('pagamento no próprio site', () => {
   })
 
   it('Pix e cartão saem com o valor do pedido, a referência e os dados certos', async () => {
-    const { buildPixPaymentBody, buildCardPaymentBody, cardRejectionMessage } = await import('@/lib/payments/mercadopago')
+    const { buildPixPaymentBody, buildCardPaymentBody, cardRejectionMessage, rejectionReason } = await import('@/lib/payments/mercadopago')
     const base = {
       orderId: 'pedido-9',
       amountCents: 53000,
@@ -215,8 +215,16 @@ describe('pagamento no próprio site', () => {
       payer: { email: 'ana@example.com', identification: { type: 'CPF', number: '52998224725' } },
       statementDescriptor: 'MABYECHRIS',
     })
-    expect(card).toMatchObject({ transaction_amount: 530, token: 'tok', installments: 3, payment_method_id: 'visa', issuer_id: '25', binary_mode: true })
+    expect(card).toMatchObject({ transaction_amount: 530, token: 'tok', installments: 3, payment_method_id: 'visa', issuer_id: '25', binary_mode: false })
+    // Dados para o antifraude: categoria dos itens e telefone do comprador
+    expect(card.additional_info.items[0]).toMatchObject({ category_id: 'others', quantity: 1, unit_price: 350 })
+    expect(card.additional_info.payer).not.toHaveProperty('phone')
+    const comFone = buildCardPaymentBody({ ...base, payerPhone: '5598999998888', token: 't', installments: 1, paymentMethodId: 'visa', issuerId: null, payer: { email: 'a@b.co', identification: null } })
+    expect(comFone.additional_info.payer).toMatchObject({ first_name: 'Ana', phone: { area_code: '98', number: '999998888' } })
     expect(cardRejectionMessage('cc_rejected_insufficient_amount')).toMatch(/limite/)
+    expect(cardRejectionMessage('cc_rejected_high_risk')).toMatch(/por segurança/)
     expect(cardRejectionMessage('qualquer')).toMatch(/não foi aprovado/)
+    expect(rejectionReason('cc_rejected_high_risk')).toBe('antifraude do Mercado Pago (alto risco) (cc_rejected_high_risk)')
+    expect(rejectionReason('novo_codigo')).toBe('novo_codigo')
   })
 })

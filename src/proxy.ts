@@ -17,7 +17,11 @@ const MP_CHECKOUT =
  */
 const MP_SCRIPTS = `${MP_CHECKOUT} https://applepay.cdn-apple.com https://pay.google.com`
 
-function buildCsp(nonce: string, isDev: boolean, checkout: boolean) {
+/**
+ * checkout: páginas com o formulário do Mercado Pago. embed: a do modal de pagamento (/pagar/…),
+ * que só pode ser aberta num iframe do próprio site.
+ */
+function buildCsp(nonce: string, isDev: boolean, checkout: boolean, embed: boolean) {
   const mp = checkout ? ` ${MP_CHECKOUT}` : ''
   return [
     `default-src 'self'`,
@@ -33,7 +37,7 @@ function buildCsp(nonce: string, isDev: boolean, checkout: boolean) {
     `object-src 'none'`,
     `base-uri 'self'`,
     `form-action 'self' ${MP_FORM_TARGETS}`,
-    `frame-ancestors 'none'`,
+    `frame-ancestors ${embed ? "'self'" : "'none'"}`,
     ...(isDev || process.env.FORCE_HTTPS === 'false' ? [] : ['upgrade-insecure-requests']),
   ].join('; ')
 }
@@ -58,7 +62,8 @@ export function proxy(request: NextRequest) {
   }
 
   const nonce = Buffer.from(crypto.randomUUID()).toString('base64')
-  const csp = buildCsp(nonce, isDev, pathname.startsWith('/presentes/pagamento/'))
+  const embed = pathname.startsWith('/pagar/')
+  const csp = buildCsp(nonce, isDev, embed || pathname.startsWith('/presentes/pagamento/'), embed)
   const requestHeaders = new Headers(request.headers)
   requestHeaders.set('x-nonce', nonce)
   requestHeaders.set('Content-Security-Policy', csp)

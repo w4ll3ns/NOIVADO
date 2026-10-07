@@ -63,6 +63,24 @@ export async function startGiftOrder(input: OrderInput): Promise<{ orderId: stri
   if (input.items.length > MAX_ORDER_ITEMS) throw new PaymentError(`Escolha até ${MAX_ORDER_ITEMS} presentes por vez.`)
   if (new Set(input.items.map((i) => i.gift.id)).size !== input.items.length) throw new PaymentError('Há um presente repetido na sua lista.')
 
+  // Pagamento no site: fechou o modal e voltou sem mudar a lista? Continua o mesmo pedido (e o Pix
+  // que já foi gerado), só com os dados do comprador atualizados.
+  if (!simulation && transparentCheckout() && input.replaceOrderId && UUID.test(input.replaceOrderId)) {
+    const same = await sameOrderStillPayable(input.replaceOrderId, input.items)
+    if (same) {
+      await db
+        .update(schema.giftPayments)
+        .set({ payerName: input.payerName, payerEmail: input.payerEmail, payerPhone: input.payerPhone, message: null, updatedAt: new Date() })
+        .where(eq(schema.giftPayments.orderId, same.reference))
+      // A mensagem é uma só por pedido (numa linha).
+      await db
+        .update(schema.giftPayments)
+        .set({ message: input.message })
+        .where(eq(schema.giftPayments.id, same.rows[0].id))
+      return { orderId: same.reference, redirectUrl: `/presentes/pagamento/${same.reference}` }
+    }
+  }
+
   const orderId = randomUUID()
   await db.transaction(async (tx) => {
     const ids = input.items.map((i) => i.gift.id).sort()
@@ -133,6 +151,20 @@ export async function startGiftOrder(input: OrderInput): Promise<{ orderId: stri
       .where(eq(schema.giftPayments.orderId, orderId))
     throw new PaymentError('Não conseguimos abrir o pagamento agora. Tente novamente em alguns instantes.')
   }
+}
+
+/** O pedido anterior, se tiver os mesmos presentes e valores e ainda puder ser pago. */
+async function sameOrderStillPayable(ref: string, items: OrderInput['items']) {
+  const order = await orderReadyToPay(ref).catch(() => null)
+  if (!order) return null
+  const key = (list: { id: string; cents: number }[]) =>
+    list
+      .map((i) => `${i.id}:${i.cents}`)
+      .sort()
+      .join()
+  const same =
+    key(order.rows.map((r) => ({ id: r.giftId, cents: r.amountCents }))) === key(items.map((i) => ({ id: i.gift.id, cents: i.amountCents })))
+  return same ? order : null
 }
 
 /** Pagamento no próprio site (Checkout Transparente): precisa do access token e da chave pública. */
@@ -246,6 +278,7 @@ export async function payOrderWithPix(ref: string, cpfInput: string): Promise<Pi
       appUrl: env.appUrl,
       items: order.rows.map((r) => ({ id: r.id, title: r.giftName, amountCents: r.amountCents })),
       payerName: first.payerName,
+      payerPhone: first.payerPhone,
       payerEmail: first.payerEmail,
       cpf,
       expiresAt,
@@ -294,6 +327,7 @@ export async function payOrderWithCard(ref: string, input: CardInput): Promise<{
       appUrl: env.appUrl,
       items: order.rows.map((r) => ({ id: r.id, title: r.giftName, amountCents: r.amountCents })),
       payerName: previous.payerName,
+      payerPhone: previous.payerPhone,
       token: input.token,
       installments: input.installments,
       paymentMethodId: input.paymentMethodId,

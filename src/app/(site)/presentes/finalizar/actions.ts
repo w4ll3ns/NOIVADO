@@ -7,7 +7,7 @@ import { getSettings } from '@/lib/settings'
 import { env } from '@/lib/env'
 import { cleanLine, cleanText, isEmail } from '@/lib/sanitize'
 import { normalizePhone } from '@/lib/format'
-import { MAX_ORDER_ITEMS, PaymentError, startGiftOrder } from '@/lib/payments/service'
+import { MAX_ORDER_ITEMS, PaymentError, startGiftOrder, transparentCheckout } from '@/lib/payments/service'
 import { clientIp, hashIp } from '@/lib/request'
 import { rateLimit } from '@/lib/security/rate-limit'
 
@@ -22,6 +22,8 @@ export type FinalizarState = {
    * libera o formulário do Mercado Pago; numa navegação interna valeria a da página anterior.
    */
   ir?: string
+  /** Pagamento no próprio site: o pedido abre no modal de pagamento, sem sair desta página. */
+  pagar?: { ref: string; totalCents: number }
 }
 
 export async function finalizarPresentesAction(_prev: FinalizarState, form: FormData): Promise<FinalizarState> {
@@ -88,6 +90,7 @@ export async function finalizarPresentesAction(_prev: FinalizarState, form: Form
       replaceOrderId: jar.get(ORDER_COOKIE)?.value ?? null,
     })
     jar.set(ORDER_COOKIE, res.orderId, { httpOnly: true, sameSite: 'lax', secure: env.isProduction, path: '/', maxAge: 60 * 60 * 24 })
+    if (transparentCheckout()) return { pagar: { ref: res.orderId, totalCents: items.reduce((t, i) => t + i.amountCents, 0) }, values }
     return { ir: res.redirectUrl, values }
   } catch (err) {
     if (err instanceof PaymentError) return { error: err.message, values }

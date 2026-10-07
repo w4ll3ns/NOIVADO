@@ -1,10 +1,11 @@
 'use client'
 
 import Link from 'next/link'
-import { useActionState, useEffect, useState, useSyncExternalStore } from 'react'
+import { useActionState, useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import { EngravedIcon } from '@/components/ornaments/EngravedIcon'
 import { FrameCorners } from '@/components/ornaments/Ornaments'
 import { assinarSacola, definirValor, sacola, sacolaNoServidor, substituirSacola, tirar } from '@/components/gifts/sacola'
+import { ModalPagamento } from '@/components/gifts/ModalPagamento'
 import { formatBRLShort, parseBRLToCents } from '@/lib/format'
 import type { FinalizarState } from './actions'
 
@@ -49,12 +50,23 @@ export function Finalizar({ presentes, action, defaults, coupleNames }: Props) {
 
   useEffect(() => setMontado(true), [])
 
-  // Pedido criado: abre o pagamento com carregamento completo (ver FinalizarState.ir).
+  // Pagamento no site: o pedido abre no modal. Fechou e clicou de novo sem mudar nada? Reabre o
+  // mesmo pedido, sem passar pelo servidor (o Pix gerado continua lá).
+  const [modal, setModal] = useState<{ ref: string; totalCents: number; chave: string; versao: number } | null>(null)
+  const [modalAberto, setModalAberto] = useState(false)
+  const chaveEnviada = useRef('')
+  const fecharModal = useCallback(() => setModalAberto(false), [])
+
+  // Pedido criado: abre o modal, ou a página de pagamento com carregamento completo (FinalizarState.ir).
   const [saindo, setSaindo] = useState(false)
   useEffect(() => {
-    if (!state.ir) return
-    setSaindo(true)
-    window.location.assign(state.ir)
+    if (state.pagar) {
+      setModal((m) => ({ ...state.pagar!, chave: chaveEnviada.current, versao: (m?.versao ?? 0) + 1 }))
+      setModalAberto(true)
+    } else if (state.ir) {
+      setSaindo(true)
+      window.location.assign(state.ir)
+    }
   }, [state])
   // Voltou do pagamento pelo "voltar" do navegador (página restaurada da memória): libera o botão.
   useEffect(() => {
@@ -129,7 +141,17 @@ export function Finalizar({ presentes, action, defaults, coupleNames }: Props) {
 
       <div className="paper paper--ornate">
         <FrameCorners />
-        <form action={formAction} className="form">
+        <form
+          action={formAction}
+          className="form"
+          onSubmit={(e) => {
+            const chave = JSON.stringify([...new FormData(e.currentTarget).entries()])
+            chaveEnviada.current = chave
+            if (modal?.chave !== chave) return
+            e.preventDefault()
+            setModalAberto(true)
+          }}
+        >
           <input type="hidden" name="itens" value={JSON.stringify(lista.map(({ item }) => item))} />
           <p className="paper__title">Seus dados</p>
           <div className="field">
@@ -177,6 +199,7 @@ export function Finalizar({ presentes, action, defaults, coupleNames }: Props) {
           </p>
         </form>
       </div>
+      {modal ? <ModalPagamento pedido={modal} aberto={modalAberto} onFechar={fecharModal} /> : null}
     </>
   )
 }

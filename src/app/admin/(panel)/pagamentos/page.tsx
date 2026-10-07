@@ -8,6 +8,7 @@ import { listPayments } from '@/lib/admin/payments'
 import { PAYMENT_LABEL, paymentMethodLabel } from '@/lib/admin/labels'
 import { PAYMENT_STATUSES } from '@/lib/db/schema'
 import { expireStalePayments } from '@/lib/payments/service'
+import { rejectionReason } from '@/lib/payments/mercadopago'
 import { formatBRL, formatDateTimeCompact } from '@/lib/format'
 import { env } from '@/lib/env'
 import { syncPaymentAction } from './actions'
@@ -134,6 +135,12 @@ export default async function PaymentsPage(props: PageProps<'/admin/pagamentos'>
                       <>
                         <br />
                         <small style={{ color: 'var(--rose)' }}>Valor divergente — verifique no Mercado Pago</small>
+                      </>
+                    ) : null}
+                    {p.status === 'rejected' && p.statusDetail ? (
+                      <>
+                        <br />
+                        <small>Motivo: {rejectionReason(p.statusDetail)}</small>
                       </>
                     ) : null}
                   </td>
