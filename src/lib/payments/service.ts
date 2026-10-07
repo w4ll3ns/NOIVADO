@@ -9,8 +9,6 @@ import { availabilityOf, getPublicGifts, giftCounts, type Gift } from '@/lib/gif
 import type { PaymentStatus } from '@/lib/db/schema'
 import {
   cancelPayment,
-  cardRejectionMessage,
-  buildCardPaymentBody,
   buildPixPaymentBody,
   createPayment,
   createPreference,
@@ -65,7 +63,7 @@ export async function startGiftOrder(input: OrderInput): Promise<{ orderId: stri
 
   // Pagamento no site: fechou o modal e voltou sem mudar a lista? Continua o mesmo pedido (e o Pix
   // que já foi gerado), só com os dados do comprador atualizados.
-  if (!simulation && transparentCheckout() && input.replaceOrderId && UUID.test(input.replaceOrderId)) {
+  if (pixOnSite() && input.replaceOrderId && UUID.test(input.replaceOrderId)) {
     const same = await sameOrderStillPayable(input.replaceOrderId, input.items)
     if (same) {
       await db
@@ -139,18 +137,8 @@ export async function startGiftOrder(input: OrderInput): Promise<{ orderId: stri
   })
 
   if (simulation) return { orderId, redirectUrl: `/presentes/simulacao/${orderId}` }
-  // Com a chave pública: Pix e cartão no próprio site.
-  if (transparentCheckout()) return { orderId, redirectUrl: `/presentes/pagamento/${orderId}` }
-  try {
-    return { orderId, redirectUrl: await checkoutProUrl(orderId) }
-  } catch (err) {
-    console.error('Falha ao criar preferência no Mercado Pago', err)
-    await db
-      .update(schema.giftPayments)
-      .set({ status: 'cancelled', statusDetail: 'preference_error', updatedAt: new Date() })
-      .where(eq(schema.giftPayments.orderId, orderId))
-    throw new PaymentError('Não conseguimos abrir o pagamento agora. Tente novamente em alguns instantes.')
-  }
+  // Pix no próprio site (modal do "Finalizar presentes"); o cartão vai para o Checkout Pro.
+  return { orderId, redirectUrl: `/presentes/pagamento/${orderId}` }
 }
 
 /** O pedido anterior, se tiver os mesmos presentes e valores e ainda puder ser pago. */
@@ -167,12 +155,12 @@ async function sameOrderStillPayable(ref: string, items: OrderInput['items']) {
   return same ? order : null
 }
 
-/** Pagamento no próprio site (Checkout Transparente): precisa do access token e da chave pública. */
-export function transparentCheckout() {
-  return !!env.mpAccessToken && !!env.mpPublicKey && !env.paymentsSimulation
+/** Pix no próprio site (QR Code pela API); o cartão de crédito vai para a página do Mercado Pago. */
+export function pixOnSite() {
+  return !!env.mpAccessToken && !env.paymentsSimulation
 }
 
-/** Checkout Pro (página do Mercado Pago) para um pedido já criado; reaproveita a preferência se houver. */
+/** Cartão de crédito: Checkout Pro (página do Mercado Pago) para um pedido já criado; reaproveita a preferência se houver. */
 export async function checkoutProUrl(ref: string) {
   const token = env.mpAccessToken
   if (!token) throw new PaymentError('Os presentes estarão disponíveis em breve. Tente novamente mais tarde.')
@@ -181,7 +169,7 @@ export async function checkoutProUrl(ref: string) {
   if (order.checkoutUrl && order.rows[0].mpPreferenceId) return order.checkoutUrl
   const settings = await getSettings()
   const first = order.rows[0]
-  const pref = await createPreferenceOnlyPixAndCard(token, {
+  const pref = await createCardPreference(token, {
     externalReference: order.reference,
     items: order.rows.map((row) => ({
       id: row.id,
@@ -291,61 +279,6 @@ export async function payOrderWithPix(ref: string, cpfInput: string): Promise<Pi
   return view
 }
 
-export type CardInput = {
-  token: string
-  paymentMethodId: string
-  issuerId: string | null
-  installments: number
-  email: string
-  identification: { type: string; number: string } | null
-  deviceId: string | null
-  /** Identifica a tentativa (evita cobrar duas vezes se o mesmo envio chegar repetido). */
-  attempt: string
-}
-
-/** Paga o pedido com o cartão de crédito tokenizado pelo formulário seguro do Mercado Pago. */
-export async function payOrderWithCard(ref: string, input: CardInput): Promise<{ status: PaymentStatus; message: string | null }> {
-  const token = env.mpAccessToken
-  if (!token) throw new PaymentError('Os presentes estarão disponíveis em breve.')
-  const order = await orderReadyToPay(ref)
-  const settings = await getSettings()
-  if (!Number.isInteger(input.installments) || input.installments < 1 || input.installments > settings.gifts.maxInstallments) {
-    throw new PaymentError(`Escolha de 1 a ${settings.gifts.maxInstallments} parcelas.`)
-  }
-  const methods = await paymentMethodsCached(token)
-  const method = methods?.find((m) => m.id === input.paymentMethodId)
-  if (methods && method?.payment_type_id !== 'credit_card') {
-    throw new PaymentError('Use um cartão de crédito (ou pague com Pix).')
-  }
-  const previous = order.rows[0]
-  const mp = await createPayment(
-    token,
-    buildCardPaymentBody({
-      orderId: order.reference,
-      amountCents: order.totalCents,
-      description: `Presentes para ${settings.event.coupleNames}`,
-      appUrl: env.appUrl,
-      items: order.rows.map((r) => ({ id: r.id, title: r.giftName, amountCents: r.amountCents })),
-      payerName: previous.payerName,
-      payerPhone: previous.payerPhone,
-      token: input.token,
-      installments: input.installments,
-      paymentMethodId: input.paymentMethodId,
-      issuerId: input.issuerId,
-      payer: { email: input.email || previous.payerEmail, identification: input.identification },
-      statementDescriptor: settings.gifts.statementDescriptor,
-    }),
-    { idempotencyKey: `${order.reference}:card:${input.attempt}`, deviceId: input.deviceId },
-  )
-  await applyMpPayment(mp, 'checkout')
-  const status = mapMpStatus(mp.status, mp.status_detail)
-  // Pago no cartão: o Pix que tinha sido gerado para o mesmo pedido não vale mais.
-  if (status === 'approved' && previous.mpPaymentId && previous.paymentMethod === 'pix' && previous.mpPaymentId !== String(mp.id)) {
-    await cancelPayment(token, previous.mpPaymentId).catch((err) => console.error('Não foi possível cancelar o Pix anterior', err))
-  }
-  return { status, message: status === 'rejected' ? cardRejectionMessage(mp.status_detail) : null }
-}
-
 /** Meios de pagamento da conta (cache de 6 h); null se não der para consultar. */
 let methodsCache: { token: string; methods: MpPaymentMethod[]; at: number } | null = null
 async function paymentMethodsCached(token: string) {
@@ -375,19 +308,23 @@ async function excludedTypes(token: string) {
 }
 
 /**
- * Checkout só com Pix e cartão de crédito. Se o Mercado Pago recusar alguma exclusão (400), tenta
- * de novo com menos exclusões — sem o Mercado Crédito (a menos documentada) e, por fim, só sem o
- * boleto: o pagamento nunca fica indisponível por causa disso. A que der certo fica guardada.
+ * Checkout Pro só com cartão de crédito (o Pix é pago no próprio site). Se o Mercado Pago recusar
+ * alguma exclusão (400), tenta de novo com menos exclusões: sem o Mercado Crédito (a menos
+ * documentada), depois só sem o boleto e, por fim, deixando o Pix — o pagamento nunca fica
+ * indisponível por causa disso. A que der certo fica guardada.
  */
-async function createPreferenceOnlyPixAndCard(token: string, input: Omit<PreferenceInput, 'excludedPaymentTypes'>) {
+async function createCardPreference(token: string, input: Omit<PreferenceInput, 'excludedPaymentTypes'>) {
   const types = await excludedTypes(token)
-  const attempts = [types, types.filter((t) => t !== 'digital_currency'), SAFE_EXCLUDED_TYPES].filter(
+  const methods = await paymentMethodsCached(token)
+  // Só exclui o Pix (bank_transfer) se a conta tiver Pix: excluir um tipo inexistente dá erro.
+  const semPix = (set: string[]) => (!methods || methods.some((m) => m.payment_type_id === 'bank_transfer') ? [...set, 'bank_transfer'] : set)
+  const attempts = [semPix(types), semPix(types.filter((t) => t !== 'digital_currency')), semPix(SAFE_EXCLUDED_TYPES), SAFE_EXCLUDED_TYPES].filter(
     (set, i, all) => set.length && all.findIndex((o) => o.join() === set.join()) === i,
   )
   for (const [i, set] of attempts.entries()) {
     try {
       const pref = await createPreference(token, { ...input, excludedPaymentTypes: set }, i ? `${input.externalReference}:${i}` : undefined)
-      if (i) excludedCache = { token, types: set, at: Date.now() }
+      if (i) excludedCache = { token, types: set.filter((t) => t !== 'bank_transfer'), at: Date.now() }
       return pref
     } catch (err) {
       const last = i === attempts.length - 1
@@ -409,7 +346,7 @@ export type MercadoPagoStatus =
       webhookSecret: boolean
       webhookUrl: string
       httpsOk: boolean
-      /** Com a Public Key de produção: pagamento no próprio site. */
+      /** Pix no próprio site e cartão no Checkout Pro (falso só no modo de simulação). */
       onSite: boolean
     }
 
@@ -436,7 +373,7 @@ export async function mercadoPagoStatus(): Promise<MercadoPagoStatus> {
     webhookSecret: !!env.mpWebhookSecret,
     webhookUrl: `${env.appUrl}/api/webhooks/mercadopago`,
     httpsOk: env.appUrl.startsWith('https://'),
-    onSite: transparentCheckout(),
+    onSite: pixOnSite(),
   }
 }
 

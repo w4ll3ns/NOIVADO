@@ -1,29 +1,25 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef } from 'react'
 import { formatBRL } from '@/lib/format'
-import type { MensagemPagamento } from './Pagamento'
+import { Pagamento, type TelaPagamento } from './Pagamento'
+import { pagarComCartao } from './pagarComCartao'
 
 type Props = {
-  /** versao: muda a cada pedido enviado (dados novos → iframe novo, mesmo se o pedido for o mesmo). */
-  pedido: { ref: string; totalCents: number; versao: number }
+  tela: TelaPagamento
   aberto: boolean
   onFechar: () => void
 }
 
 /**
- * Pix e cartão numa janela sobre o "Finalizar presentes", sem sair da página (a música continua).
- * O conteúdo vem de /pagar/[ref] num iframe, que tem a própria política de segurança para o
- * formulário do Mercado Pago. Fechar não perde nada: o iframe continua montado (com o Pix gerado).
+ * Pagamento numa janela sobre o "Finalizar presentes", sem sair da página (a música continua):
+ * Pix aqui mesmo; cartão na página do Mercado Pago. Fechar não perde nada — a tela continua
+ * montada (com o Pix gerado) e reabre igual.
  */
-export function ModalPagamento({ pedido, aberto, onFechar }: Props) {
+export function ModalPagamento({ tela, aberto, onFechar }: Props) {
   const router = useRouter()
   const ref = useRef<HTMLDialogElement>(null)
-  const frame = useRef<HTMLIFrameElement>(null)
-  const chave = `${pedido.ref}:${pedido.versao}`
-  /** O iframe que já carregou. */
-  const [carregou, setCarregou] = useState<string | null>(null)
 
   useEffect(() => {
     const d = ref.current
@@ -32,19 +28,11 @@ export function ModalPagamento({ pedido, aberto, onFechar }: Props) {
     if (!aberto && d.open) d.close()
   }, [aberto])
 
-  useEffect(() => {
-    const ouvir = (e: MessageEvent<MensagemPagamento>) => {
-      if (e.origin !== window.location.origin || e.source !== frame.current?.contentWindow) return
-      if (e.data?.tipo === 'mc-pago') {
-        ref.current?.close()
-        router.push(`/presentes/retorno?ref=${encodeURIComponent(e.data.ref)}`)
-      } else if (e.data?.tipo === 'mc-fechar') {
-        onFechar()
-      }
-    }
-    window.addEventListener('message', ouvir)
-    return () => window.removeEventListener('message', ouvir)
-  }, [router, onFechar])
+  const cartao = useMemo(() => pagarComCartao.bind(null, tela.orderRef), [tela.orderRef])
+  const pago = useCallback(() => {
+    ref.current?.close()
+    router.push(`/presentes/retorno?ref=${encodeURIComponent(tela.orderRef)}`)
+  }, [router, tela.orderRef])
 
   return (
     <dialog
@@ -60,28 +48,14 @@ export function ModalPagamento({ pedido, aberto, onFechar }: Props) {
           <p className="pag-modal__eyebrow" id="pag-modal-titulo">
             Pagamento
           </p>
-          <p className="pag-modal__total">{formatBRL(pedido.totalCents)}</p>
+          <p className="pag-modal__total">{formatBRL(tela.totalCents)}</p>
         </div>
         <button type="button" className="pag-modal__fechar" onClick={onFechar} aria-label="Fechar o pagamento">
           ×
         </button>
       </div>
       <div className="pag-modal__corpo">
-        {carregou !== chave ? (
-          <p className="pag-modal__carregando" role="status">
-            <span className="pix__pulso" aria-hidden="true" />
-            Preparando o pagamento…
-          </p>
-        ) : null}
-        <iframe
-          key={chave}
-          ref={frame}
-          src={`/pagar/${pedido.ref}`}
-          title="Pagamento com Pix ou cartão de crédito"
-          className="pag-modal__frame"
-          allow="payment; clipboard-write"
-          onLoad={() => setCarregou(chave)}
-        />
+        <Pagamento {...tela} cartao={cartao} onPago={pago} />
       </div>
     </dialog>
   )

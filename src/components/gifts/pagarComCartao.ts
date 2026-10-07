@@ -2,11 +2,11 @@
 
 import { checkoutProUrl, orderReadyToPay, PaymentError } from '@/lib/payments/service'
 
-/** `url`: a página do Mercado Pago; o cliente abre na janela inteira (mesmo de dentro do modal). */
+/** `url`: a página do Mercado Pago (o cliente abre na janela inteira). */
 export type FallbackState = { error?: string; url?: string }
 
-/** Plano B: se o formulário do cartão não carregar aqui, paga na página do Mercado Pago. */
-export async function pagarNoMercadoPago(ref: string, _prev: FallbackState): Promise<FallbackState> {
+/** Cartão de crédito: abre a página do Mercado Pago (Checkout Pro) para este pedido. */
+export async function pagarComCartao(ref: string, _prev: FallbackState): Promise<FallbackState> {
   try {
     await orderReadyToPay(ref)
     return { url: await checkoutProUrl(ref) }

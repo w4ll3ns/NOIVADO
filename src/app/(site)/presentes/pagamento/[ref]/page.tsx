@@ -4,13 +4,13 @@ import { notFound, redirect } from 'next/navigation'
 import { Divider, FrameCorners } from '@/components/ornaments/Ornaments'
 import { ResumoPedido } from '@/components/gifts/ResumoPedido'
 import { Pagamento } from '@/components/gifts/Pagamento'
-import { pagarNoMercadoPago } from '@/components/gifts/planoB'
+import { pagarComCartao } from '@/components/gifts/pagarComCartao'
 import { dadosPagamento } from '@/lib/payments/pagina'
 import { TentarDeNovo } from '../../retorno/Sacola'
 
 export const metadata: Metadata = { title: 'Pagamento', robots: { index: false, follow: false } }
 
-/** Pagamento sem sair do site: Pix (QR Code e copia e cola) ou cartão de crédito. */
+/** Pagamento de um pedido: Pix aqui mesmo (QR Code e copia e cola) ou cartão na página do Mercado Pago. */
 export default async function PagamentoPage(props: PageProps<'/presentes/pagamento/[ref]'>) {
   const { ref } = await props.params
   const dados = await dadosPagamento(ref)
@@ -44,7 +44,7 @@ export default async function PagamentoPage(props: PageProps<'/presentes/pagamen
             </div>
           </div>
         ) : (
-          <Pagamento {...tela} fallback={pagarNoMercadoPago.bind(null, order.reference)} />
+          <Pagamento {...tela} cartao={pagarComCartao.bind(null, order.reference)} />
         )}
       </div>
     </div>

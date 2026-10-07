@@ -5,6 +5,7 @@ import { CoupleNames } from '@/components/site/CoupleNames'
 import { getSettings } from '@/lib/settings'
 import { getCurrentGuest } from '@/lib/invitations'
 import { getOrder, syncPaymentWithMp } from '@/lib/payments/service'
+import { cardRejectionMessage } from '@/lib/payments/mercadopago'
 import { rateLimit } from '@/lib/security/rate-limit'
 import { ResumoPedido } from '@/components/gifts/ResumoPedido'
 import { AutoRefresh } from './AutoRefresh'
@@ -63,19 +64,11 @@ export default async function GiftReturnPage(props: PageProps<'/presentes/retorn
                 : 'Pagando o Pix, isso leva só alguns instantes.'}
             </p>
             <ResumoPedido rows={order.rows} totalCents={order.totalCents} />
-            {!order.checkoutUrl && order.provider === 'mercadopago' ? (
+            {order.provider === 'mercadopago' ? (
               <p style={{ marginTop: 18 }}>
-                {/* <a>, não <Link>: a página de pagamento precisa carregar inteira (CSP própria). */}
-                <a className="btn btn--link" href={`/presentes/pagamento/${order.reference}`}>
+                <Link className="btn btn--link" href={`/presentes/pagamento/${order.reference}`}>
                   Voltar ao pagamento
-                </a>
-              </p>
-            ) : null}
-            {order.checkoutUrl ? (
-              <p style={{ marginTop: 18 }}>
-                <a className="btn btn--link" href={order.checkoutUrl}>
-                  Voltar ao pagamento
-                </a>
+                </Link>
               </p>
             ) : null}
           </div>
@@ -85,7 +78,7 @@ export default async function GiftReturnPage(props: PageProps<'/presentes/retorn
             <Divider />
             <p className="result__text">
               {order.status === 'rejected'
-                ? 'O Mercado Pago não aprovou esta tentativa. Você pode tentar novamente com outra forma de pagamento.'
+                ? cardRejectionMessage(order.rows[0].statusDetail)
                 : order.status === 'refunded'
                   ? 'Este pagamento foi estornado.'
                   : 'O tempo para concluir este presente terminou. Se quiser, é só começar de novo.'}

@@ -5,51 +5,39 @@ import { useActionState, useCallback, useEffect, useRef, useState } from 'react'
 import { formatBRL } from '@/lib/format'
 import { formatCpf, isCpf } from '@/lib/cpf'
 import type { PixView } from '@/lib/payments/service'
-import type { FallbackState } from './planoB'
+import type { FallbackState } from './pagarComCartao'
 
-type Props = {
+/** Dados da tela (vêm de dadosPagamento, no servidor). */
+export type TelaPagamento = {
   orderRef: string
   totalCents: number
-  /** Sem a chave pública só existe o plano B (página do Mercado Pago). */
-  publicKey: string | null
-  email: string
   maxInstallments: number
   pixAtual: PixView | null
   tentativaRecusada: boolean
-  fallback: (prev: FallbackState) => Promise<FallbackState>
-  /** Dentro do modal do "Finalizar presentes" (iframe): avisa a página de fora em vez de navegar. */
-  embed?: boolean
 }
 
-/** Mensagens do iframe do pagamento para a página do "Finalizar presentes". */
-export type MensagemPagamento = { tipo: 'mc-pago'; ref: string } | { tipo: 'mc-fechar' }
-
-export function avisarPagina(msg: MensagemPagamento) {
-  window.parent.postMessage(msg, window.location.origin)
+type Props = TelaPagamento & {
+  /** Cartão: abre a página do Mercado Pago para este pedido (pagarNoMercadoPago já com o pedido). */
+  cartao: (prev: FallbackState) => Promise<FallbackState>
+  /** Pago: o que fazer (padrão: ir para o agradecimento). */
+  onPago?: () => void
 }
 
 type Metodo = 'pix' | 'cartao'
 
+/**
+ * Pix no próprio site (QR Code e copia e cola) e cartão de crédito na página do Mercado Pago, onde
+ * o antifraude e a verificação do banco aprovam mais. Usado na página de pagamento e no modal do
+ * "Finalizar presentes".
+ */
 export function Pagamento(props: Props) {
   const router = useRouter()
   const [metodo, setMetodo] = useState<Metodo>('pix')
-  /** O formulário do Mercado Pago só carrega quando o convidado escolhe cartão (e continua montado). */
-  const [cartaoAberto, setCartaoAberto] = useState(false)
-  const { embed, orderRef } = props
+  const { orderRef, onPago } = props
   const pago = useCallback(() => {
-    if (embed) avisarPagina({ tipo: 'mc-pago', ref: orderRef })
+    if (onPago) onPago()
     else router.push(`/presentes/retorno?ref=${orderRef}`)
-  }, [router, orderRef, embed])
-
-  // A política de segurança (CSP) que libera o formulário do Mercado Pago vem no carregamento desta
-  // página. Chegando por navegação interna (o "voltar" do navegador, por exemplo), valeria a da página
-  // anterior e o cartão não carregaria: recarrega.
-  const transparente = !!props.publicKey
-  useEffect(() => {
-    if (transparente && !carregadaAqui()) window.location.reload()
-  }, [transparente])
-
-  if (!props.publicKey) return <PlanoB fallback={props.fallback} motivo={null} />
+  }, [router, orderRef, onPago])
 
   return (
     <div className="pagamento__conteudo">
@@ -68,10 +56,7 @@ export function Pagamento(props: Props) {
             aria-selected={metodo === m}
             aria-controls={`painel-${m}`}
             className="pagamento__metodo"
-            onClick={() => {
-              setMetodo(m)
-              if (m === 'cartao') setCartaoAberto(true)
-            }}
+            onClick={() => setMetodo(m)}
           >
             {m === 'pix' ? <IconePix /> : <IconeCartao />}
             {m === 'pix' ? (
@@ -89,7 +74,7 @@ export function Pagamento(props: Props) {
         <PainelPix orderRef={props.orderRef} totalCents={props.totalCents} inicial={props.pixAtual} ativo={metodo === 'pix'} onPago={pago} />
       </div>
       <div id="painel-cartao" role="tabpanel" aria-labelledby="tab-cartao" hidden={metodo !== 'cartao'}>
-        {cartaoAberto ? <PainelCartao {...props} onPago={pago} /> : null}
+        <PainelCartao maxInstallments={props.maxInstallments} cartao={props.cartao} />
       </div>
 
       <p className="privacy-note">
@@ -267,207 +252,29 @@ function PainelPix({
 }
 
 /* ------------------------------------------------------------------ */
-/* Cartão de crédito (formulário seguro do Mercado Pago)                */
+/* Cartão de crédito: na página do Mercado Pago                         */
 /* ------------------------------------------------------------------ */
 
-type CardFormData = {
-  token: string
-  issuer_id?: string | number
-  payment_method_id: string
-  transaction_amount: number
-  installments: number
-  payer: { email?: string; identification?: { type: string; number: string } }
-}
-type BrickController = { unmount: () => void }
-type MpSdk = {
-  bricks: () => { create: (name: 'cardPayment', container: string, settings: unknown) => Promise<BrickController> }
-}
-declare global {
-  interface Window {
-    MercadoPago?: new (publicKey: string, options?: { locale?: string }) => MpSdk
-    MP_DEVICE_SESSION_ID?: string
-  }
-}
-
-/** O documento foi carregado nesta página (e não numa anterior, com navegação interna até aqui)? */
-function carregadaAqui() {
-  const nav = performance.getEntriesByType('navigation')[0]
-  if (!nav) return true
-  try {
-    return new URL(nav.name).pathname === window.location.pathname
-  } catch {
-    return true
-  }
-}
-
-/** Carrega um script externo uma única vez (a CSP desta página libera os domínios do Mercado Pago). */
-function carregarScript(src: string, attrs: Record<string, string> = {}) {
-  return new Promise<void>((resolve, reject) => {
-    const existente = document.querySelector<HTMLScriptElement>(`script[src="${src}"]`)
-    if (existente?.dataset.carregado) return resolve()
-    const s = existente ?? document.createElement('script')
-    s.addEventListener('load', () => {
-      s.dataset.carregado = '1'
-      resolve()
-    })
-    s.addEventListener('error', () => reject(new Error(`não carregou ${src}`)))
-    if (!existente) {
-      s.src = src
-      s.async = true
-      for (const [k, v] of Object.entries(attrs)) s.setAttribute(k, v)
-      document.head.appendChild(s)
-    }
-  })
-}
-
-function PainelCartao({ orderRef, totalCents, publicKey, email, maxInstallments, fallback, onPago }: Props & { onPago: () => void }) {
-  const [estado, setEstado] = useState<'carregando' | 'pronto' | 'falhou'>('carregando')
-  const [erro, setErro] = useState<string | null>(null)
-  /** Motivo técnico quando o formulário não carrega (aparece discreto no plano B, para diagnóstico). */
-  const [detalhe, setDetalhe] = useState<string | null>(null)
-  const [rodada, setRodada] = useState(0)
-  const container = `cartao-mp-${rodada}`
-
+function PainelCartao({ maxInstallments, cartao }: { maxInstallments: number; cartao: Props['cartao'] }) {
+  const [state, action, pending] = useActionState<FallbackState>(cartao, {})
+  // Abre na janela inteira; ao concluir, o Mercado Pago traz o convidado de volta ao agradecimento.
   useEffect(() => {
-    let cancelado = false
-    let pronto = false
-    let controle: BrickController | null = null
-    // O que a política de segurança do navegador bloquear enquanto o formulário carrega.
-    const bloqueios = new Set<string>()
-    const onBloqueio = (e: SecurityPolicyViolationEvent) => bloqueios.add(`${e.effectiveDirective} ${e.blockedURI}`)
-    document.addEventListener('securitypolicyviolation', onBloqueio)
-    const falhar = (motivo: string) => {
-      if (cancelado || pronto) return
-      setDetalhe([motivo, ...bloqueios].join(' · '))
-      setEstado('falhou')
-    }
-    const tempo = window.setTimeout(() => falhar('o formulário demorou mais de 20 s'), 20_000)
-    const montar = async () => {
-      // Device ID antifraude do Mercado Pago (melhora a aprovação); se falhar, segue sem ele.
-      void carregarScript('https://www.mercadopago.com/v2/security.js', { view: 'checkout' }).catch(() => {})
-      await carregarScript('https://sdk.mercadopago.com/js/v2')
-      if (cancelado || !window.MercadoPago || !publicKey) throw new Error('SDK indisponível')
-      const mp = new window.MercadoPago(publicKey, { locale: 'pt-BR' })
-      controle = await mp.bricks().create('cardPayment', container, {
-        initialization: { amount: totalCents / 100, payer: { email } },
-        customization: {
-          visual: {
-            texts: { formTitle: 'Dados do cartão', formSubmit: `Pagar ${formatBRL(totalCents)}` },
-            style: {
-              theme: 'default',
-              customVariables: {
-                baseColor: '#7c6855',
-                baseColorFirstVariant: '#62503f',
-                baseColorSecondVariant: '#b1a190',
-                textPrimaryColor: '#4e3e31',
-                textSecondaryColor: '#6b5a4b',
-                inputBackgroundColor: '#fffdfa',
-                formBackgroundColor: '#fcf7f2',
-                outlinePrimaryColor: '#7c6855',
-                outlineSecondaryColor: '#cdbba9',
-                buttonTextColor: '#fcf7f2',
-                errorColor: '#9a3b2e',
-                borderRadiusSmall: '2px',
-                borderRadiusMedium: '2px',
-                borderRadiusLarge: '4px',
-              },
-            },
-          },
-          // Só crédito (o servidor também confere); parcelas até o máximo do painel.
-          paymentMethods: { maxInstallments, types: { excluded: ['debit_card'] } },
-        },
-        callbacks: {
-          onReady: () => {
-            pronto = true
-            if (!cancelado) setEstado('pronto')
-          },
-          onSubmit: (formData: CardFormData) => pagar(formData),
-          onError: (error: { type?: string; cause?: string; message?: string }) => {
-            console.error('Formulário do Mercado Pago', error)
-            if (error?.type === 'critical') falhar([error.cause, error.message].filter(Boolean).join(': ') || 'erro do formulário')
-          },
-        },
-      })
-      if (cancelado) controle.unmount()
-    }
-    const pagar = async (formData: CardFormData) => {
-      setErro(null)
-      const res = await fetch('/api/presentes/cartao', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ ref: orderRef, attempt: crypto.randomUUID(), deviceId: window.MP_DEVICE_SESSION_ID ?? null, formData }),
-      }).catch(() => null)
-      const data = res ? ((await res.json().catch(() => null)) as { status?: string; message?: string | null; error?: string } | null) : null
-      if (res?.ok && (data?.status === 'approved' || data?.status === 'awaiting')) return onPago()
-      setErro(data?.message ?? data?.error ?? 'Não conseguimos concluir agora. Tente de novo em instantes ou pague com Pix.')
-      // Formulário novo para a próxima tentativa (o token do cartão é de uso único).
-      setEstado('carregando')
-      setRodada((r) => r + 1)
-    }
-    montar().catch((err) => {
-      console.error(err)
-      falhar(err instanceof Error ? err.message : String(err))
-    })
-    return () => {
-      cancelado = true
-      window.clearTimeout(tempo)
-      document.removeEventListener('securitypolicyviolation', onBloqueio)
-      controle?.unmount()
-    }
-  }, [container, orderRef, totalCents, publicKey, email, maxInstallments, onPago])
-
-  return (
-    <div className="cartao">
-      {erro ? (
-        <p className="notice notice--error" role="alert">
-          {erro}
-        </p>
-      ) : null}
-      {estado === 'falhou' ? (
-        <PlanoB fallback={fallback} motivo="Não conseguimos carregar o formulário do cartão aqui." detalhe={detalhe} />
-      ) : (
-        <>
-          {estado === 'pronto' && maxInstallments > 1 ? (
-            <p className="cartao__dica">Em até {maxInstallments}x: as parcelas aparecem depois que você digita o número do cartão.</p>
-          ) : null}
-          {estado === 'carregando' ? (
-            <p className="cartao__carregando" role="status">
-              <span className="pix__pulso" aria-hidden="true" />
-              Carregando o formulário seguro do Mercado Pago…
-            </p>
-          ) : null}
-          <div id={container} key={container} className="cartao__brick" />
-        </>
-      )}
-    </div>
-  )
-}
-
-/** Página do Mercado Pago: quando o pagamento aqui não está disponível. */
-function PlanoB({ fallback, motivo, detalhe }: { fallback: Props['fallback']; motivo: string | null; detalhe?: string | null }) {
-  const [state, action, pending] = useActionState<FallbackState>(fallback, {})
-  // A página do Mercado Pago abre na janela inteira (de dentro do modal, sai do iframe).
-  useEffect(() => {
-    if (state.url) (window.top ?? window).location.assign(state.url)
+    if (state.url) window.location.assign(state.url)
   }, [state])
   return (
-    <form action={action} className="plano-b">
-      {motivo ? <p className="pagamento__texto">{motivo}</p> : null}
-      <p className="pagamento__texto">Você pode concluir com Pix ou cartão no ambiente seguro do Mercado Pago.</p>
+    <form action={action} className="cartao-mp">
+      <p className="pagamento__texto">
+        O cartão de crédito é pago no ambiente seguro do Mercado Pago{maxInstallments > 1 ? `, em até ${maxInstallments}x` : ''}. Ao concluir,
+        você volta para cá.
+      </p>
       {state.error ? (
         <p className="notice notice--error" role="alert">
           {state.error}
         </p>
       ) : null}
       <button type="submit" className="btn btn--primary btn--block" disabled={pending || !!state.url}>
-        {pending || state.url ? 'Abrindo…' : 'Pagar no site do Mercado Pago'}
+        {pending || state.url ? 'Abrindo o Mercado Pago…' : 'Pagar com cartão'}
       </button>
-      {detalhe ? (
-        <details className="plano-b__detalhe">
-          <summary>Detalhes técnicos</summary>
-          <code>{detalhe}</code>
-        </details>
-      ) : null}
     </form>
   )
 }

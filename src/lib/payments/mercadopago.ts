@@ -197,31 +197,6 @@ export function buildPixPaymentBody(input: PaymentCommon & { payerEmail: string;
   }
 }
 
-/** Cartão de crédito: o token vem do formulário seguro do Mercado Pago (o número do cartão nunca passa por aqui). */
-export function buildCardPaymentBody(
-  input: PaymentCommon & {
-    token: string
-    installments: number
-    paymentMethodId: string
-    issuerId: string | null
-    payer: { email: string; identification: { type: string; number: string } | null }
-    statementDescriptor?: string
-  },
-) {
-  return {
-    ...common(input),
-    token: input.token,
-    installments: input.installments,
-    payment_method_id: input.paymentMethodId,
-    ...(input.issuerId ? { issuer_id: input.issuerId } : {}),
-    payer: { email: input.payer.email, ...nameParts(input.payerName), ...(input.payer.identification ? { identification: input.payer.identification } : {}) },
-    statement_descriptor: input.statementDescriptor?.slice(0, 13) || undefined,
-    // Sem modo binário: o que o Mercado Pago quiser analisar fica "em análise" (o convidado vê
-    // "aguardando a confirmação") em vez de ser recusado na hora — o modo binário reduz a aprovação.
-    binary_mode: false,
-  }
-}
-
 export async function createPayment(
   accessToken: string,
   body: Record<string, unknown>,

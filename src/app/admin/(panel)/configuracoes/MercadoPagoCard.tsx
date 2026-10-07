@@ -49,16 +49,7 @@ export async function MercadoPagoCard() {
           <div>
             <dt>Pagamento</dt>
             <dd>
-              {s.onSite ? (
-                'No próprio site: Pix com QR Code e cartão, sem sair do convite'
-              ) : (
-                <>
-                  Na página do Mercado Pago.{' '}
-                  <span className="a-help">
-                    Para pagar sem sair do site, adicione a Public Key: <code>cd /opt/noivado &amp;&amp; ./scripts/mercadopago.sh</code>
-                  </span>
-                </>
-              )}
+              {s.onSite ? 'Pix no próprio site (QR Code e copia e cola); cartão de crédito na página do Mercado Pago' : 'Simulação (sem cobrança)'}
             </dd>
           </div>
           <div>
@@ -68,7 +59,7 @@ export async function MercadoPagoCard() {
               {s.cards.length ? <span className="a-help"> ({s.cards.slice(0, 6).join(', ')})</span> : null}
               {s.pix === false ? (
                 <p className="a-alert a-alert--warn" style={{ marginTop: 8 }}>
-                  O Pix não aparece para esta conta. Cadastre uma chave Pix na conta do Mercado Pago para ele aparecer no checkout.
+                  O Pix não aparece para esta conta. Cadastre uma chave Pix na conta do Mercado Pago para gerar o Pix no site.
                 </p>
               ) : (
                 <p className="a-help">O Pix só aparece se a conta tiver uma chave Pix cadastrada.</p>

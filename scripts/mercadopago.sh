@@ -5,11 +5,10 @@
 #  Na VPS:
 #     cd /opt/noivado && git pull && ./scripts/mercadopago.sh
 #
-#  Pede o Access Token e a Public Key de produção e a assinatura secreta do webhook
-#  (o token e a assinatura NÃO aparecem na tela nem ficam no histórico), confere o token
-#  no Mercado Pago, grava no .env (só o root lê) e reinicia o site com ./scripts/vps-setup.sh.
-#  Com a Public Key, o convidado paga sem sair do site (Pix com QR Code e cartão).
-#  Rodando de novo, Enter mantém o que já está salvo.
+#  Pede o Access Token de produção e a assinatura secreta do webhook (NÃO aparecem na tela
+#  nem ficam no histórico), confere o token no Mercado Pago, grava no .env (só o root lê) e
+#  reinicia o site com ./scripts/vps-setup.sh. O Pix é pago no próprio site; o cartão de
+#  crédito, na página do Mercado Pago. Rodando de novo, Enter mantém o que já está salvo.
 # ─────────────────────────────────────────────────────────────────────────────
 set -euo pipefail
 cd "$(dirname "$0")/.."
@@ -29,7 +28,6 @@ echo
 echo "Mercado Pago — conectar a lista de presentes"
 echo
 ATUAL_TOKEN="$(getenv MP_ACCESS_TOKEN)"
-ATUAL_PUBLIC="$(getenv MP_PUBLIC_KEY)"
 ATUAL_SECRET="$(getenv MP_WEBHOOK_SECRET)"
 
 echo "  1) Access Token de PRODUÇÃO"
@@ -72,37 +70,9 @@ NICK="$(campo nickname)"
 EMAIL="$(campo email)"
 echo "     ✓ Conta: ${NICK:-sem apelido}${EMAIL:+ · $EMAIL}"
 
-echo
-echo "  2) Public Key de PRODUÇÃO (para pagar sem sair do site)"
-echo "     (mesma tela das credenciais; também começa com APP_USR-)"
-if [ -n "$ATUAL_PUBLIC" ]; then
-  read -rp "     Cole a nova e tecle Enter, ou só Enter para manter a atual: " PUBLIC
-else
-  read -rp "     Cole aqui e tecle Enter (ou só Enter para pular): " PUBLIC
-fi
-PUBLIC="$(printf %s "$PUBLIC" | tr -d '[:space:]')"
-if [ -z "$PUBLIC" ]; then PUBLIC="$ATUAL_PUBLIC"; fi
-if [ -n "$PUBLIC" ]; then
-  case "$PUBLIC" in
-    APP_USR-*) ;;
-    TEST-*)
-      echo "✗ Essa é uma Public Key de TESTE. Use a de produção, que começa com APP_USR-." >&2
-      exit 1
-      ;;
-    *)
-      echo "✗ Isso não parece uma Public Key (ela começa com APP_USR-)." >&2
-      exit 1
-      ;;
-  esac
-  if ! [[ "$PUBLIC" =~ ^[A-Za-z0-9_-]+$ ]] || [ "$PUBLIC" = "$TOKEN" ]; then
-    echo "✗ Confira a Public Key: ela é diferente do Access Token (é a chave mais curta)." >&2
-    exit 1
-  fi
-fi
-
 APP_URL="$(getenv APP_URL)"
 echo
-echo "  3) Assinatura secreta do webhook (recomendado)"
+echo "  2) Assinatura secreta do webhook (recomendado)"
 echo "     (sua aplicação → Webhooks → Configurar notificações → modo produção)"
 echo "     URL:    ${APP_URL:-https://seu-site}/api/webhooks/mercadopago"
 echo "     Evento: Pagamentos"
@@ -119,17 +89,12 @@ if [ -n "$SECRET" ] && ! [[ "$SECRET" =~ ^[A-Za-z0-9_-]+$ ]]; then
 fi
 
 setenv MP_ACCESS_TOKEN "$TOKEN"
-if [ -n "$PUBLIC" ]; then setenv MP_PUBLIC_KEY "$PUBLIC"; fi
 if [ -n "$SECRET" ]; then setenv MP_WEBHOOK_SECRET "$SECRET"; fi
 setenv PAYMENTS_SIMULATION false
 chmod 600 .env
 echo
 echo "  ✓ Credenciais gravadas no .env"
-if [ -n "$PUBLIC" ]; then
-  echo "    Pagamento: no próprio site (Pix com QR Code e cartão de crédito)"
-else
-  echo "    Pagamento: na página do Mercado Pago (sem Public Key)"
-fi
+echo "    Pagamento: Pix no próprio site; cartão de crédito na página do Mercado Pago"
 if [ -z "$SECRET" ] && [ -z "$(getenv MP_WEBHOOK_SECRET)" ]; then
   echo "    (sem assinatura do webhook: os pagamentos são confirmados consultando o Mercado Pago;"
   echo "     rode este script de novo quando tiver a assinatura)"

@@ -27,10 +27,6 @@ export const env = {
   get mpAccessToken() {
     return process.env.MP_ACCESS_TOKEN || null
   },
-  /** Chave pública: com ela, o pagamento acontece no próprio site (Pix e cartão). */
-  get mpPublicKey() {
-    return process.env.MP_PUBLIC_KEY || null
-  },
   get mpWebhookSecret() {
     return process.env.MP_WEBHOOK_SECRET || null
   },

@@ -3,41 +3,20 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { adminCookieName } from '@/lib/auth/constants'
 
 const MP_FORM_TARGETS = 'https://*.mercadopago.com.br https://*.mercadopago.com https://*.mercadolivre.com'
-/**
- * Só na página de pagamento: o formulário seguro do Mercado Pago (SDK, campos do cartão em iframes,
- * imagens das bandeiras e a API de tokenização) vem destes domínios.
- */
-const MP_CHECKOUT =
-  'https://*.mercadopago.com https://*.mercadopago.com.br https://*.mercadolibre.com https://*.mercadolivre.com https://*.mercadolivre.com.br https://*.mlstatic.com'
-/**
- * O formulário do cartão pode injetar scripts próprios e usar eval, o que a política com nonce +
- * 'strict-dynamic' bloqueia. Na página de pagamento vale a política "sem nonce" do Next
- * ('unsafe-inline' + lista de domínios). Ela só vale se a página for carregada inteira: os links
- * para cá usam <a>/location, não navegação interna.
- */
-const MP_SCRIPTS = `${MP_CHECKOUT} https://applepay.cdn-apple.com https://pay.google.com`
 
-/**
- * checkout: páginas com o formulário do Mercado Pago. embed: a do modal de pagamento (/pagar/…),
- * que só pode ser aberta num iframe do próprio site.
- */
-function buildCsp(nonce: string, isDev: boolean, checkout: boolean, embed: boolean) {
-  const mp = checkout ? ` ${MP_CHECKOUT}` : ''
+function buildCsp(nonce: string, isDev: boolean) {
   return [
     `default-src 'self'`,
-    checkout
-      ? `script-src 'self' 'unsafe-inline' 'unsafe-eval' ${MP_SCRIPTS}`
-      : `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'${isDev ? " 'unsafe-eval'" : ''}`,
-    `style-src 'self' 'unsafe-inline'${mp}`,
-    `img-src 'self' blob: data:${mp}`,
-    `font-src 'self'${mp}`,
+    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'${isDev ? " 'unsafe-eval'" : ''}`,
+    `style-src 'self' 'unsafe-inline'`,
+    `img-src 'self' blob: data:`,
+    `font-src 'self'`,
     `media-src 'self' blob:`,
-    `connect-src 'self'${mp}`,
-    ...(checkout ? [`frame-src 'self'${mp} https://pay.google.com`, `worker-src 'self' blob:`] : []),
+    `connect-src 'self'`,
     `object-src 'none'`,
     `base-uri 'self'`,
     `form-action 'self' ${MP_FORM_TARGETS}`,
-    `frame-ancestors ${embed ? "'self'" : "'none'"}`,
+    `frame-ancestors 'none'`,
     ...(isDev || process.env.FORCE_HTTPS === 'false' ? [] : ['upgrade-insecure-requests']),
   ].join('; ')
 }
@@ -62,8 +41,7 @@ export function proxy(request: NextRequest) {
   }
 
   const nonce = Buffer.from(crypto.randomUUID()).toString('base64')
-  const embed = pathname.startsWith('/pagar/')
-  const csp = buildCsp(nonce, isDev, embed || pathname.startsWith('/presentes/pagamento/'), embed)
+  const csp = buildCsp(nonce, isDev)
   const requestHeaders = new Headers(request.headers)
   requestHeaders.set('x-nonce', nonce)
   requestHeaders.set('Content-Security-Policy', csp)
