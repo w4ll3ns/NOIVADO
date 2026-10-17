@@ -504,6 +504,21 @@ a.a-kpi:hover {
 .a-filters .a-field {
   min-width: 150px;
 }
+/* Aviso de convites sem telefone */
+.a-semtel {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 14px;
+  margin-bottom: 14px;
+}
+.a-semtel .a-actions {
+  margin: 0;
+}
+.a-semtel__item {
+  color: var(--rose);
+}
 
 /* Tabelas */
 .a-table-wrap {
@@ -951,4 +966,69 @@ a.a-kpi:hover {
     grid-template-columns: 1fr;
     gap: 2px;
   }
+}
+
+/* Completar telefones */
+.a-tel-convite {
+  scroll-margin-top: 80px;
+}
+.a-tel-convite:target {
+  border-color: var(--a-accent);
+  box-shadow: 0 0 0 3px rgba(124, 104, 85, 0.15);
+}
+.a-tel-convite__titulo {
+  font-size: 1.1rem;
+  margin: 0 0 6px;
+}
+.a-tel-pessoa {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 8px 10px;
+  padding: 10px 0;
+  border-top: 1px solid var(--a-line);
+}
+.a-tel-pessoa:first-of-type {
+  border-top: 0;
+}
+.a-tel-pessoa__campo {
+  flex: 1 1 220px;
+}
+.a-tel-pessoa__acoes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.a-tel-pessoa__sugestoes,
+.a-agenda-opcoes {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  flex-basis: 100%;
+}
+.a-chip {
+  border: 1px solid var(--a-line);
+  border-radius: 999px;
+  background: var(--a-bg);
+  color: var(--a-text);
+  padding: 4px 10px;
+  font: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+.a-chip:hover {
+  border-color: var(--a-accent);
+}
+.a-agenda-ajuda p + p {
+  margin-top: 6px;
+}
+.a-campo-agenda {
+  display: grid;
+  gap: 6px;
+  align-content: start;
+  justify-items: start;
+}
+.a-campo-agenda > .a-field {
+  justify-self: stretch;
 }

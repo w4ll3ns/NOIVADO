@@ -269,3 +269,64 @@ describe('pagamento no próprio site', () => {
     expect(rejectionReason('novo_codigo')).toBe('novo_codigo')
   })
 })
+
+describe('agenda do celular (.vcf)', () => {
+  it('lê iPhone (item1.TEL, dobras) e Android antigo (quoted-printable), ignora quem não tem telefone', async () => {
+    const { lerVcard } = await import('@/lib/vcard')
+    const vcf = [
+      'BEGIN:VCARD',
+      'VERSION:3.0',
+      'N:Souza;Jordania;;;',
+      'FN:Jordania Souza',
+      'item1.TEL;type=CELL;type=pref:+55 (98) 98539-1797',
+      'item1.X-ABLabel:celular',
+      'TEL;type=HOME:(98) 3222-0000',
+      'PHOTO;ENCODING=b;TYPE=JPEG:AAAA',
+      ' BBBB',
+      'END:VCARD',
+      'BEGIN:VCARD',
+      'VERSION:2.1',
+      'N;CHARSET=UTF-8;ENCODING=QUOTED-PRINTABLE:;F=C3=A1bio;;;',
+      'FN;CHARSET=UTF-8;ENCODING=QUOTED-PRINTABLE:F=C3=A1bio Ara=C3=BAjo d=',
+      'a Silva',
+      'TEL;CELL:98 8125-9495',
+      'END:VCARD',
+      'BEGIN:VCARD',
+      'VERSION:4.0',
+      'FN:Sem Telefone',
+      'EMAIL:x@y.z',
+      'END:VCARD',
+      'BEGIN:VCARD',
+      'VERSION:4.0',
+      'N:Lima\\; Neto;Gleiber;;;',
+      'TEL;VALUE=uri;TYPE=cell:tel:+55-98-99999-0001',
+      'END:VCARD',
+    ].join('\r\n')
+    expect(lerVcard(vcf)).toEqual([
+      { nome: 'Jordania Souza', telefones: ['5598985391797', '559832220000'] },
+      { nome: 'Fábio Araújo da Silva', telefones: ['559881259495'] },
+      { nome: 'Gleiber Lima; Neto', telefones: ['5598999990001'] },
+    ])
+  })
+
+  it('sugere contatos pelo nome (primeiro nome, depois sobrenome)', async () => {
+    const { sugerirContatos } = await import('@/lib/vcard')
+    const agenda = [
+      { nome: 'João Pedro', telefones: ['1'] },
+      { nome: 'Tia Rosina', telefones: ['2'] },
+      { nome: 'Joao Silva', telefones: ['3'] },
+      { nome: 'Maria', telefones: ['4'] },
+      { nome: 'Joãozinho', telefones: ['5'] },
+    ]
+    // nome completo bate: só ele
+    expect(sugerirContatos({ firstName: 'João', lastName: 'Silva' }, agenda).map((c) => c.nome)).toEqual(['Joao Silva'])
+    // só o primeiro nome: todos os João (sem "Joãozinho")
+    expect(sugerirContatos({ firstName: 'João' }, agenda).map((c) => c.nome)).toEqual(['João Pedro', 'Joao Silva'])
+    expect(sugerirContatos({ firstName: 'Rosina' }, agenda).map((c) => c.nome)).toEqual(['Tia Rosina'])
+    expect(sugerirContatos({ firstName: 'Ester' }, agenda)).toEqual([])
+    // nome com duas palavras no mesmo campo ("Maria José"), e sobrenome sozinho não puxa ninguém
+    const outra = [{ nome: 'Maria José Lima', telefones: ['6'] }, { nome: 'Maria Clara', telefones: ['7'] }, { nome: 'Pedro Silva', telefones: ['8'] }]
+    expect(sugerirContatos({ firstName: 'Maria José' }, outra).map((c) => c.nome)).toEqual(['Maria José Lima'])
+    expect(sugerirContatos({ firstName: 'Ana', lastName: 'Silva' }, outra)).toEqual([])
+  })
+})

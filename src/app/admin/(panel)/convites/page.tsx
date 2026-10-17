@@ -1,10 +1,12 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { AccessBadge, Empty, PageHead, RsvpBadge, SentBadge, Tabs } from '@/components/admin/ui'
-import { CopyButton } from '@/components/admin/ClientBits'
+import { CopyButton, FilterSelect } from '@/components/admin/ClientBits'
 import { WhatsAppProvider, WhatsAppTrigger } from '@/components/admin/WhatsAppDialog'
 import { requireAdmin, hasRole } from '@/lib/auth/session'
-import { INVITATION_FILTERS } from '@/lib/admin/invitation-filters'
+import { INVITATION_FILTERS, noPhoneSql } from '@/lib/admin/invitation-filters'
+import { db, schema } from '@/lib/db'
+import { and, asc, isNull, sql } from 'drizzle-orm'
 import { invitationStats } from '@/lib/admin/stats'
 import { loadInvitationRows, toWaInvitation, whatsappContext } from '@/lib/admin/invitations'
 import { formatBRL, formatDateTimeCompact, formatPhone, fullName } from '@/lib/format'
@@ -19,7 +21,20 @@ export default async function InvitationsPage(props: PageProps<'/admin/convites'
   const filter = typeof sp.filtro === 'string' ? sp.filtro : 'todos'
   const q = typeof sp.q === 'string' ? sp.q : ''
   const archived = sp.arquivados === '1'
-  const [rows, stats, wa] = await Promise.all([loadInvitationRows({ filter, q, archived }), invitationStats(), whatsappContext()])
+  const str = (k: string) => (typeof sp[k] === 'string' ? (sp[k] as string) : '')
+  // Filtros extras: combinam com as abas e com a busca.
+  const extra = { telefone: str('telefone'), tipo: str('tipo'), grupo: str('grupo') }
+  const [rows, stats, wa, groups, [semTelefone]] = await Promise.all([
+    loadInvitationRows({ filter, q, archived, phone: extra.telefone, kind: extra.tipo, group: extra.grupo }),
+    invitationStats(),
+    whatsappContext(),
+    db.select({ id: schema.guestGroups.id, name: schema.guestGroups.name }).from(schema.guestGroups).orderBy(asc(schema.guestGroups.name)),
+    db
+      .select({ n: sql<number>`count(*)::int` })
+      .from(schema.invitations)
+      .where(and(isNull(schema.invitations.archivedAt), noPhoneSql())),
+  ])
+  const extrasAtivos = Object.values(extra).some(Boolean)
   const canEdit = hasRole(admin, 'editor')
   const counts: Record<string, number> = {
     todos: stats.total,
@@ -31,7 +46,12 @@ export default async function InvitationsPage(props: PageProps<'/admin/convites'
     'nao-comparecerao': stats.declined,
     pendentes: stats.pending,
   }
-  const qs = (f: string) => `/admin/convites?filtro=${f}${q ? `&q=${encodeURIComponent(q)}` : ''}`
+  const qs = (f: string) => {
+    const p = new URLSearchParams({ filtro: f })
+    if (q) p.set('q', q)
+    for (const [k, v] of Object.entries(extra)) if (v) p.set(k, v)
+    return `/admin/convites?${p}`
+  }
 
   return (
     <>
@@ -60,19 +80,79 @@ export default async function InvitationsPage(props: PageProps<'/admin/convites'
         }
       />
 
-      <Tabs current={archived ? '' : filter} items={INVITATION_FILTERS.map((f) => ({ key: f.key, label: f.label, href: qs(f.key), count: counts[f.key] }))} />
+      {/* Com filtros extras, os números das abas (de todos os convites) confundiriam: aparece o total encontrado. */}
+      <Tabs
+        current={archived ? '' : filter}
+        items={INVITATION_FILTERS.map((f) => ({ key: f.key, label: f.label, href: qs(f.key), count: extrasAtivos ? undefined : counts[f.key] }))}
+      />
 
-      <form className="a-filters" role="search">
+      {semTelefone.n && !archived ? (
+        <div className="a-alert a-alert--warn a-semtel">
+          <span>
+            <strong>{semTelefone.n === 1 ? '1 convite está' : `${semTelefone.n} convites estão`} sem telefone</strong> para receber o link.
+          </span>
+          <span className="a-actions">
+            {extra.telefone !== 'sem' ? (
+              <Link className="a-btn a-btn--sm" href="/admin/convites?filtro=todos&telefone=sem">
+                Ver só esses
+              </Link>
+            ) : null}
+            {canEdit ? (
+              <Link className="a-btn a-btn--sm a-btn--primary" href="/admin/convites/telefones">
+                Completar telefones
+              </Link>
+            ) : null}
+          </span>
+        </div>
+      ) : null}
+
+      {/* key: ao navegar (abas, “Ver só esses”), os campos voltam a mostrar os filtros do endereço. */}
+      <form key={JSON.stringify([filter, q, archived, extra])} className="a-filters" role="search">
         <input type="hidden" name="filtro" value={filter} />
+        {archived ? <input type="hidden" name="arquivados" value="1" /> : null}
         <label className="a-field" style={{ flex: 1, minWidth: 220 }}>
           <span>Buscar por nome, grupo ou telefone</span>
           <input className="a-input" name="q" defaultValue={q} placeholder="Ex.: Silva" />
         </label>
-        <button className="a-btn">Buscar</button>
+        <FilterSelect
+          name="telefone"
+          label="Telefone"
+          value={extra.telefone}
+          options={[
+            { value: '', label: 'Todos' },
+            { value: 'sem', label: 'Sem telefone' },
+            { value: 'com', label: 'Com telefone' },
+          ]}
+        />
+        <FilterSelect
+          name="tipo"
+          label="Tipo"
+          value={extra.tipo}
+          options={[{ value: '', label: 'Todos' }, ...Object.entries(KIND_LABEL).map(([value, label]) => ({ value, label }))]}
+        />
+        {groups.length ? (
+          <FilterSelect
+            name="grupo"
+            label="Grupo"
+            value={extra.grupo}
+            options={[{ value: '', label: 'Todos' }, { value: 'sem', label: 'Sem grupo' }, ...groups.map((g) => ({ value: g.id, label: g.name }))]}
+          />
+        ) : null}
+        <button className="a-btn">Filtrar</button>
+        {extrasAtivos || q ? (
+          <Link className="a-btn a-btn--ghost" href={archived ? '/admin/convites?arquivados=1' : `/admin/convites?filtro=${filter}`}>
+            Limpar
+          </Link>
+        ) : null}
         <Link className="a-btn a-btn--ghost" href={archived ? '/admin/convites' : '/admin/convites?arquivados=1'}>
           {archived ? 'Ver ativos' : 'Arquivados'}
         </Link>
       </form>
+      {extrasAtivos || q ? (
+        <p className="a-muted" style={{ margin: '-4px 0 10px' }}>
+          {rows.length === 1 ? '1 convite encontrado' : `${rows.length} convites encontrados`}
+        </p>
+      ) : null}
 
       <WhatsAppProvider templates={wa.templates} eventValues={wa.eventValues} onOpened={whatsappOpenedAction} onMarkSent={markSentAction}>
         <div className="a-table-wrap">
@@ -101,7 +181,7 @@ export default async function InvitationsPage(props: PageProps<'/admin/convites'
                           {r.groupName ? ` · ${r.groupName}` : ''} · {r.guests.map((g) => fullName(g.firstName, g.lastName)).join(', ')}
                         </small>
                         <br />
-                        <small className="nowrap">{r.inv.phone ? formatPhone(r.inv.phone) : 'Sem telefone'}</small>
+                        <TelefoneDoConvite row={r} canEdit={canEdit} />
                       </td>
                       <td>
                         <div className="a-stack">
@@ -159,5 +239,28 @@ export default async function InvitationsPage(props: PageProps<'/admin/convites'
         </div>
       </WhatsAppProvider>
     </>
+  )
+}
+
+/** Telefone para contato: o do convite, senão o de alguém dele; sem nenhum, atalho para completar. */
+function TelefoneDoConvite({ row, canEdit }: { row: Awaited<ReturnType<typeof loadInvitationRows>>[number]; canEdit: boolean }) {
+  const outro = row.guests.find((g) => g.phone)
+  if (row.inv.phone) return <small className="nowrap">{formatPhone(row.inv.phone)}</small>
+  if (outro?.phone)
+    return (
+      <small className="nowrap">
+        {formatPhone(outro.phone)} · {outro.firstName}
+      </small>
+    )
+  return (
+    <small className="nowrap a-semtel__item">
+      Sem telefone
+      {canEdit ? (
+        <>
+          {' · '}
+          <Link href={`/admin/convites/telefones#c-${row.inv.id}`}>adicionar</Link>
+        </>
+      ) : null}
+    </small>
   )
 }

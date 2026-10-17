@@ -1,6 +1,8 @@
 'use client'
 
-import { useActionState, useState } from 'react'
+import { useActionState, useRef, useState } from 'react'
+import { BotaoAgenda } from '@/components/admin/Agenda'
+import { formatPhone } from '@/lib/format'
 import type { InvitationFormState } from './actions'
 
 type GuestRow = {
@@ -42,6 +44,7 @@ const key = () => `g${++counter}`
 
 export function InvitationForm({ action, isNew, readOnly, templates, groups, initial }: Props) {
   const [state, formAction, pending] = useActionState<InvitationFormState, FormData>(action, {})
+  const telefoneRef = useRef<HTMLInputElement>(null)
   const [guests, setGuests] = useState<GuestRow[]>(() =>
     initial.guests.length
       ? initial.guests.map((g) => ({ ...g, key: key() }))
@@ -82,10 +85,17 @@ export function InvitationForm({ action, isNew, readOnly, templates, groups, ini
               ))}
             </datalist>
           </label>
-          <label className="a-field">
-            <span>Telefone (WhatsApp)</span>
-            <input className="a-input" name="phone" type="tel" defaultValue={initial.phone} placeholder="(98) 99999-9999" />
-          </label>
+          <div className="a-campo-agenda">
+            <label className="a-field">
+              <span>Telefone (WhatsApp)</span>
+              <input ref={telefoneRef} className="a-input" name="phone" type="tel" defaultValue={initial.phone} placeholder="(98) 99999-9999" />
+            </label>
+            <BotaoAgenda
+              onEscolher={(t) => {
+                if (telefoneRef.current) telefoneRef.current.value = formatPhone(t)
+              }}
+            />
+          </div>
           <label className="a-field">
             <span>E-mail</span>
             <input className="a-input" name="email" type="email" defaultValue={initial.email} />
@@ -138,10 +148,13 @@ export function InvitationForm({ action, isNew, readOnly, templates, groups, ini
                   <span>Sobrenome</span>
                   <input className="a-input" value={g.lastName} onChange={(e) => update(g.key, { lastName: e.target.value })} />
                 </label>
-                <label className="a-field">
-                  <span>Telefone</span>
-                  <input className="a-input" value={g.phone} onChange={(e) => update(g.key, { phone: e.target.value })} />
-                </label>
+                <div className="a-campo-agenda">
+                  <label className="a-field">
+                    <span>Telefone</span>
+                    <input className="a-input" type="tel" value={g.phone} onChange={(e) => update(g.key, { phone: e.target.value })} />
+                  </label>
+                  <BotaoAgenda onEscolher={(t) => update(g.key, { phone: formatPhone(t) })} />
+                </div>
                 <label className="a-field">
                   <span>E-mail</span>
                   <input className="a-input" value={g.email} onChange={(e) => update(g.key, { email: e.target.value })} />

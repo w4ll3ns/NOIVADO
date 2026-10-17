@@ -56,3 +56,19 @@ export function SubmitButton({ children, className = 'a-btn a-btn--primary', pen
     </button>
   )
 }
+
+/** Select de filtro que aplica na hora (sem precisar clicar em "Filtrar"). */
+export function FilterSelect({ name, value, options, label }: { name: string; value: string; options: { value: string; label: string }[]; label: string }) {
+  return (
+    <label className="a-field">
+      <span>{label}</span>
+      <select className="a-select" name={name} defaultValue={value} onChange={(e) => e.currentTarget.form?.requestSubmit()}>
+        {options.map((o) => (
+          <option key={o.value} value={o.value}>
+            {o.label}
+          </option>
+        ))}
+      </select>
+    </label>
+  )
+}

@@ -1,7 +1,8 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { and, asc, eq, ilike, isNull, or, sql } from 'drizzle-orm'
+import { and, asc, eq, ilike, isNotNull, isNull, or, sql } from 'drizzle-orm'
 import { Badge, Empty, PageHead, Tabs } from '@/components/admin/ui'
+import { FilterSelect } from '@/components/admin/ClientBits'
 import { requireAdmin } from '@/lib/auth/session'
 import { db, schema } from '@/lib/db'
 import { formatPhone, fullName } from '@/lib/format'
@@ -20,10 +21,14 @@ export default async function GuestsPage(props: PageProps<'/admin/convidados'>) 
   const sp = await props.searchParams
   const filter = typeof sp.presenca === 'string' ? sp.presenca : 'todos'
   const q = typeof sp.q === 'string' ? sp.q.trim() : ''
+  const telefone = sp.telefone === 'sem' || sp.telefone === 'com' ? sp.telefone : ''
   const g = schema.guests
   const i = schema.invitations
   const conds = [isNull(g.removedAt), isNull(i.archivedAt)]
   if (filter === 'yes' || filter === 'no' || filter === 'pending') conds.push(eq(g.attendance, filter))
+  // Sem telefone: a pessoa não tem número próprio (o do convite aparece ao lado, se houver).
+  if (telefone === 'sem') conds.push(isNull(g.phone))
+  else if (telefone === 'com') conds.push(isNotNull(g.phone))
   if (q) {
     const like = `%${q.replace(/[%_]/g, '')}%`
     conds.push(or(sql`(${g.firstName} || ' ' || coalesce(${g.lastName}, '')) ilike ${like}`, ilike(i.label, like))!)
@@ -68,15 +73,43 @@ export default async function GuestsPage(props: PageProps<'/admin/convidados'>) 
           </>
         }
       />
-      <Tabs current={filter} items={FILTERS.map((f) => ({ key: f.key, label: f.label, href: `/admin/convidados?presenca=${f.key}`, count: Number(counts[f.key]) }))} />
-      <form className="a-filters" role="search">
+      <Tabs
+        current={filter}
+        items={FILTERS.map((f) => ({
+          key: f.key,
+          label: f.label,
+          href: `/admin/convidados?presenca=${f.key}${q ? `&q=${encodeURIComponent(q)}` : ''}${telefone ? `&telefone=${telefone}` : ''}`,
+          count: Number(counts[f.key]),
+        }))}
+      />
+      <form key={JSON.stringify([filter, q, telefone])} className="a-filters" role="search">
         <input type="hidden" name="presenca" value={filter} />
         <label className="a-field" style={{ flex: 1, minWidth: 220 }}>
           <span>Buscar</span>
           <input className="a-input" name="q" defaultValue={q} placeholder="Nome ou convite" />
         </label>
-        <button className="a-btn">Buscar</button>
+        <FilterSelect
+          name="telefone"
+          label="Telefone"
+          value={telefone}
+          options={[
+            { value: '', label: 'Todos' },
+            { value: 'sem', label: 'Sem telefone próprio' },
+            { value: 'com', label: 'Com telefone' },
+          ]}
+        />
+        <button className="a-btn">Filtrar</button>
+        {telefone || q ? (
+          <Link className="a-btn a-btn--ghost" href={`/admin/convidados?presenca=${filter}`}>
+            Limpar
+          </Link>
+        ) : null}
       </form>
+      {telefone || q ? (
+        <p className="a-muted" style={{ margin: '-4px 0 10px' }}>
+          {rows.length === 1 ? '1 pessoa encontrada' : `${rows.length} pessoas encontradas`}
+        </p>
+      ) : null}
       <div className="a-table-wrap">
         {rows.length ? (
           <table className="a-table a-table--cards">

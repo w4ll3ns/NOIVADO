@@ -2,16 +2,18 @@ import 'server-only'
 import { and, asc, desc, eq, ilike, inArray, isNotNull, isNull, or, sql } from 'drizzle-orm'
 import { db, schema } from '@/lib/db'
 import { greetingFor, invitationUrl } from '@/lib/invitations'
-import { invitationFilterSql } from './invitation-filters'
+import { invitationExtraSql, invitationFilterSql } from './invitation-filters'
 import { getSettings } from '@/lib/settings'
 import { eventTemplateValues } from '@/lib/templates'
 import { getFirstMoment } from '@/lib/content'
 import { normalizePhone } from '@/lib/format'
 import type { WaInvitation, WaTemplate } from '@/components/admin/WhatsAppDialog'
 
-export async function loadInvitationRows(opts: { filter?: string; q?: string; archived?: boolean } = {}) {
+export async function loadInvitationRows(
+  opts: { filter?: string; q?: string; archived?: boolean; phone?: string; kind?: string; group?: string } = {},
+) {
   const i = schema.invitations
-  const conditions = [opts.archived ? isNotNull(i.archivedAt) : isNull(i.archivedAt), invitationFilterSql(opts.filter ?? 'todos')]
+  const conditions = [opts.archived ? isNotNull(i.archivedAt) : isNull(i.archivedAt), invitationFilterSql(opts.filter ?? 'todos'), ...invitationExtraSql(opts)]
   const q = opts.q?.trim()
   if (q) {
     const like = `%${q.replace(/[%_]/g, '')}%`
@@ -21,7 +23,12 @@ export async function loadInvitationRows(opts: { filter?: string; q?: string; ar
         ilike(i.label, like),
         ilike(i.greetingName, like),
         sql`exists (select 1 from guests g where g.invitation_id = ${i.id} and g.removed_at is null and (g.first_name || ' ' || coalesce(g.last_name,'')) ilike ${like})`,
-        ...(digits.length >= 4 ? [ilike(i.phone, `%${digits}%`)] : []),
+        ...(digits.length >= 4
+          ? [
+              ilike(i.phone, `%${digits}%`),
+              sql`exists (select 1 from guests g where g.invitation_id = ${i.id} and g.removed_at is null and g.phone like ${`%${digits}%`})`,
+            ]
+          : []),
       ),
     )
   }
