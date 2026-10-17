@@ -31,9 +31,14 @@ export default async function GiftsAdminPage(props: PageProps<'/admin/presentes'
         actions={
           <>
             {canEdit ? (
-              <Link href="/admin/presentes/novo" className="a-btn a-btn--primary">
-                + Novo presente
-              </Link>
+              <>
+                <Link href="/admin/presentes/novo" className="a-btn a-btn--primary">
+                  + Novo presente
+                </Link>
+                <Link href="/admin/presentes/links" className="a-btn">
+                  Adicionar por links
+                </Link>
+              </>
             ) : null}
             <Link href={showArchived ? '/admin/presentes' : '/admin/presentes?arquivados=1'} className="a-btn">
               {showArchived ? 'Ocultar arquivados' : 'Ver arquivados'}

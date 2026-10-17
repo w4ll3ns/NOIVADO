@@ -330,3 +330,120 @@ describe('agenda do celular (.vcf)', () => {
     expect(sugerirContatos({ firstName: 'Ana', lastName: 'Silva' }, outra)).toEqual([])
   })
 })
+
+describe('presente a partir do link do produto', () => {
+  it('preço em reais nos formatos das lojas', async () => {
+    const { precoParaCents } = await import('@/lib/produto-link')
+    expect(precoParaCents('R$&nbsp;1.234,56')).toBe(123456)
+    expect(precoParaCents('449.90')).toBe(44990)
+    expect(precoParaCents('449,9')).toBe(44990)
+    expect(precoParaCents('1.299')).toBe(129900)
+    expect(precoParaCents(379)).toBe(37900)
+    expect(precoParaCents('1,234.50')).toBe(123450)
+    expect(precoParaCents('grátis')).toBeNull()
+  })
+
+  it('reconhece Shopify e VTEX pelos links', async () => {
+    const { handleShopify, slugVtex } = await import('@/lib/produto-link')
+    expect(handleShopify(new URL('https://letseatit.com.br/products/torradeira-eletrica-vintage-verde-220v-750w-ariete'))).toBe('torradeira-eletrica-vintage-verde-220v-750w-ariete')
+    expect(slugVtex(new URL('https://www.trousseau.com.br/pt/mini-jarra-de-vidro-limone-0600010092/p'))).toBe('mini-jarra-de-vidro-limone-0600010092')
+    expect(slugVtex(new URL('https://www.mercadolivre.com.br/liquidificador-ariete/p/MLB37932559'))).toBeNull()
+    expect(handleShopify(new URL('https://www.amazon.com.br/Ariete-Espremedor/dp/B0889FGT8S'))).toBeNull()
+  })
+
+  it('página com JSON-LD (Mercado Livre e outras): nome, preço, foto e descrição; ignora propaganda', async () => {
+    const { deHtml } = await import('@/lib/produto-link')
+    const html = `<html><head><title>Liquidificador Ariete Vintage | Mercado Livre</title>
+      <meta property="og:title" content="Liquidificador Ariete Vintage Verde - Mercado Livre">
+      <meta property="og:description" content="Frete grátis no dia ✓ Compre Liquidificador em até 12x sem juros.">
+      <meta property="og:image" content="https://http2.mlstatic.com/og.jpg">
+      <script type="application/ld+json">{"@context":"https://schema.org","@type":"Product","name":"Liquidificador Ariete Vintage Verde Copo De Vidro 1,5l 1000w",
+        "image":["https://http2.mlstatic.com/D_NQ_NP_1.webp","https://http2.mlstatic.com/D_NQ_NP_2.webp"],
+        "description":"Liquidificador com copo de vidro de 1,5 litro e 5 velocidades. Design vintage italiano.",
+        "offers":{"@type":"Offer","price":899.9,"priceCurrency":"BRL"}}</script></head><body></body></html>`
+    expect(deHtml(html, 'https://www.mercadolivre.com.br/x/p/MLB1')).toEqual({
+      titulo: 'Liquidificador Ariete Vintage Verde Copo De Vidro 1,5l 1000w',
+      descricao: 'Liquidificador com copo de vidro de 1,5 litro e 5 velocidades. Design vintage italiano.',
+      precoCents: 89990,
+      imagens: ['https://http2.mlstatic.com/D_NQ_NP_1.webp', 'https://http2.mlstatic.com/D_NQ_NP_2.webp', 'https://http2.mlstatic.com/og.jpg'],
+    })
+    // @graph + AggregateOffer + preço em og
+    const outra = `<script type="application/ld+json">{"@graph":[{"@type":"WebPage"},{"@type":["Product"],"name":"Jarra &amp; Copo","offers":{"@type":"AggregateOffer","lowPrice":"129,90"}}]}</script>`
+    expect(deHtml(outra, 'https://loja.com/jarra')).toMatchObject({ titulo: 'Jarra & Copo', precoCents: 12990 })
+    const soOg = `<meta content="/img/foto.jpg" property="og:image"><meta property="og:title" content="Mini Jarra Limone"><meta property="product:price:amount" content="159.00"><meta name="description" content="Jarra de vidro soprado com detalhe em limão.">`
+    expect(deHtml(soOg, 'https://www.trousseau.com.br/pt/mini/p')).toEqual({
+      titulo: 'Mini Jarra Limone',
+      descricao: 'Jarra de vidro soprado com detalhe em limão.',
+      precoCents: 15900,
+      imagens: ['https://www.trousseau.com.br/img/foto.jpg'],
+    })
+  })
+
+  it('Amazon: título, preço, foto grande e tópicos', async () => {
+    const { deHtml } = await import('@/lib/produto-link')
+    const html = `<span id="productTitle" class="a-size-large">  Ariete Espremedor de Frutas Cítricas 413  </span>
+      <span class="a-price"><span class="a-offscreen">R$&nbsp;379,90</span></span>
+      <img id="landingImage" data-old-hires="https://m.media-amazon.com/images/I/big.jpg" data-a-dynamic-image="{&quot;https://m.media-amazon.com/images/I/s.jpg&quot;:[300,300],&quot;https://m.media-amazon.com/images/I/m.jpg&quot;:[600,600]}">
+      <div id="feature-bullets"><ul><li><span>Antigotejamento</span></li><li><span>Design retrô</span></li></ul></div>`
+    expect(deHtml(html, 'https://www.amazon.com.br/dp/B0889FGT8S')).toEqual({
+      titulo: 'Ariete Espremedor de Frutas Cítricas 413',
+      descricao: 'Antigotejamento. Design retrô.',
+      precoCents: 37990,
+      imagens: ['https://m.media-amazon.com/images/I/big.jpg', 'https://m.media-amazon.com/images/I/m.jpg', 'https://m.media-amazon.com/images/I/s.jpg'],
+    })
+  })
+
+  it('Shopify (.json) e VTEX (API de catálogo)', async () => {
+    const { deShopify, deVtex, limparDescricao } = await import('@/lib/produto-link')
+    const shopify = {
+      product: {
+        title: 'Torradeira Elétrica Vintage Verde 220v 750w - Ariete',
+        body_html: '<p>Torradeira com <strong>6 níveis</strong> de tostagem.</p><ul><li>Bandeja de migalhas</li></ul>',
+        variants: [{ price: '699.00', available: true }],
+        images: [{ src: '//cdn.shopify.com/s/files/torradeira.jpg' }],
+      },
+    }
+    expect(deShopify(shopify, 'https://letseatit.com.br')).toEqual({
+      titulo: 'Torradeira Elétrica Vintage Verde 220v 750w - Ariete',
+      descricao: 'Torradeira com 6 níveis de tostagem. Bandeja de migalhas.',
+      precoCents: 69900,
+      imagens: ['https://cdn.shopify.com/s/files/torradeira.jpg'],
+    })
+    const vtex = [
+      {
+        productName: 'Mini Jarra de Vidro Limone',
+        description: 'Mini jarra em vidro com tampa.',
+        items: [{ images: [{ imageUrl: 'https://trousseau.vteximg.com.br/arquivos/ids/1/jarra.jpg' }], sellers: [{ commertialOffer: { Price: 159, AvailableQuantity: 3 } }] }],
+      },
+    ]
+    expect(deVtex(vtex, 'https://www.trousseau.com.br')).toEqual({
+      titulo: 'Mini Jarra de Vidro Limone',
+      descricao: 'Mini jarra em vidro com tampa.',
+      precoCents: 15900,
+      imagens: ['https://trousseau.vteximg.com.br/arquivos/ids/1/jarra.jpg'],
+    })
+    expect(deShopify({ erro: 1 }, 'https://x.com')).toBeNull()
+    expect(deVtex([], 'https://x.com')).toBeNull()
+    const longa = 'Primeira frase curta sobre o produto. ' + 'Texto muito longo de descrição do produto. '.repeat(12)
+    const curta = limparDescricao(longa)!
+    expect(curta.length).toBeLessThanOrEqual(281)
+    expect(curta.endsWith('.')).toBe(true)
+  })
+})
+
+describe('busca de links protegida', () => {
+  it('não deixa o servidor acessar a si mesmo nem a rede interna', async () => {
+    const { conferirDestino, ipInterno } = await import('@/lib/rede-segura')
+    for (const ip of ['127.0.0.1', '10.0.0.5', '172.20.1.1', '192.168.0.10', '169.254.169.254', '100.64.0.1', '0.0.0.0', '::1', 'fd00::1', 'fe80::1', '::ffff:127.0.0.1'])
+      expect(ipInterno(ip), ip).toBe(true)
+    for (const ip of ['8.8.8.8', '200.147.67.142', '2804:14c::1']) expect(ipInterno(ip), ip).toBe(false)
+    await expect(conferirDestino(new URL('http://127.0.0.1:3000/admin'))).rejects.toThrow(/não é permitido/)
+    await expect(conferirDestino(new URL('http://169.254.169.254/latest/meta-data'))).rejects.toThrow(/não é permitido/)
+    await expect(conferirDestino(new URL('http://[::1]/'))).rejects.toThrow(/não é permitido/)
+    await expect(conferirDestino(new URL('http://localhost/'))).rejects.toThrow(/não é permitido/)
+    await expect(conferirDestino(new URL('https://usuario:senha@exemplo.com/'))).rejects.toThrow(/não é permitido/)
+    await expect(conferirDestino(new URL('https://exemplo.com:8443/'))).rejects.toThrow(/não é permitido/)
+    await expect(conferirDestino(new URL('file:///etc/passwd'))).rejects.toThrow(/https/)
+    await expect(conferirDestino(new URL('http://127.0.0.1:4020/x'), true)).resolves.toBeUndefined()
+  })
+})

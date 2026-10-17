@@ -9,8 +9,10 @@ import { saveGiftAction } from '../actions'
 
 export const metadata: Metadata = { title: 'Novo presente' }
 
-export default async function NewGiftPage() {
+export default async function NewGiftPage(props: PageProps<'/admin/presentes/novo'>) {
   await requireAdmin('editor')
+  const sp = await props.searchParams
+  const link = typeof sp.link === 'string' && /^https?:\/\//i.test(sp.link) ? sp.link.slice(0, 2000) : ''
   const categories = await db.select({ id: schema.giftCategories.id, name: schema.giftCategories.name }).from(schema.giftCategories).orderBy(asc(schema.giftCategories.sortOrder))
   return (
     <>
@@ -19,6 +21,7 @@ export default async function NewGiftPage() {
         action={saveGiftAction.bind(null, null)}
         categories={categories}
         imageUrl={null}
+        linkInicial={link}
         initial={{ name: '', description: '', categoryId: categories[0]?.id ?? '', icon: 'presente', priceType: 'fixed', amount: '', min: '50', max: '', suggested: '200', quick: '100; 200; 300; 500', availability: 'unlimited', quantity: 1, featured: false, isActive: true, sortOrder: 100 }}
       />
     </>

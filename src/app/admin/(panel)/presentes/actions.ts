@@ -47,6 +47,13 @@ export async function saveGiftAction(giftId: string | null, _prev: GiftFormState
     }
   } else if (form.get('removeImage') === 'on') {
     mediaId = null
+  } else {
+    // Foto trazida pelo "Preencher pelo link" (já salva no site durante a busca).
+    const importada = String(form.get('importedMediaId') ?? '')
+    if (/^[0-9a-f-]{36}$/i.test(importada)) {
+      const [m] = await db.select({ id: schema.media.id }).from(schema.media).where(eq(schema.media.id, importada))
+      if (m) mediaId = m.id
+    }
   }
 
   const values = {
