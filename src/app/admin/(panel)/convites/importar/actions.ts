@@ -143,3 +143,26 @@ export async function confirmImportAction(_prev: ImportState, form: FormData): P
   revalidatePath('/admin/convites')
   return { done: { created, skipped } }
 }
+
+export type ExcluirTudoState = { error?: string; done?: { invitations: number; guests: number } }
+
+const CONFIRMACAO_EXCLUIR = 'EXCLUIR TUDO'
+const confere = (v: unknown) => String(v ?? '').trim().replace(/\s+/g, ' ').toUpperCase() === CONFIRMACAO_EXCLUIR
+
+/**
+ * Começar do zero (só o dono): exclui todos os convites — inclusive arquivados —, com as pessoas,
+ * links, respostas e histórico, e os grupos. Pagamentos, recados e fotos ficam (sem o vínculo).
+ */
+export async function excluirTudoAction(_prev: ExcluirTudoState, form: FormData): Promise<ExcluirTudoState> {
+  const admin = await requireAdmin('owner')
+  if (!confere(form.get('confirmacao'))) return { error: `Para confirmar, digite ${CONFIRMACAO_EXCLUIR}.` }
+  const done = await db.transaction(async (tx) => {
+    const [{ guests }] = await tx.select({ guests: sql<number>`count(*)::int` }).from(schema.guests)
+    const deleted = await tx.delete(schema.invitations).returning({ id: schema.invitations.id })
+    await tx.delete(schema.guestGroups)
+    return { invitations: deleted.length, guests }
+  })
+  await audit(admin.id, 'invitation.delete_all', 'invitation', null, done)
+  revalidatePath('/admin', 'layout')
+  return { done }
+}

@@ -220,6 +220,24 @@
   color: var(--rose);
   border-color: #dfc0b6;
 }
+/* "Começar do zero" (excluir todos os convites) */
+.a-card--perigo {
+  border-color: #dfc0b6;
+}
+.a-card--perigo .a-card__title {
+  color: var(--rose);
+}
+.a-lista-perigo {
+  margin: 8px 0 0;
+  padding-left: 1.2em;
+  display: grid;
+  gap: 4px;
+}
+.a-card--perigo .a-btn--danger:not(:disabled) {
+  background: var(--rose);
+  border-color: var(--rose);
+  color: #fff;
+}
 .a-btn--ghost {
   border-color: transparent;
   background: transparent;
