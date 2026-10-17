@@ -150,7 +150,7 @@ Esperamos vocês!
     name: 'Convite família',
     body: `Olá, {{NOME_CONVIDADO}}! ❤️
 
-Queremos muito a {{NOME_GRUPO}} ao nosso lado em um dia tão especial.
+Queremos muito vocês ao nosso lado em um dia tão especial.
 
 Nosso noivado acontecerá no dia {{DATA_EVENTO}}, às {{HORARIO_EVENTO}}, na {{LOCAL_EVENTO}}.
 

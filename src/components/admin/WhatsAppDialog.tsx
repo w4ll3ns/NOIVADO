@@ -13,6 +13,8 @@ export type WaInvitation = {
   label: string
   greeting: string
   phone: string | null
+  /** Quem recebe: cada pessoa com telefone (numa família, todos com o mesmo link). */
+  recipients: { name: string; phone: string }[]
   link: string
   kind: InvitationKind
   isCloseFamily: boolean
@@ -70,7 +72,15 @@ export function WhatsAppProvider({ templates, eventValues, onOpened, onMarkSent,
     [template, eventValues, invitation],
   )
   const message = edited ?? rendered
-  const url = invitation ? whatsappUrl(invitation.phone, message) : null
+  const recipients = invitation?.recipients ?? []
+  const varios = recipients.length > 1
+  const url = invitation ? whatsappUrl(recipients[0]?.phone ?? invitation.phone, message) : null
+  const abrir = (target: string | null) => {
+    if (!target || !invitation) return
+    // Abre primeiro (dentro do gesto do usuário), registra depois.
+    window.open(target, '_blank', 'noopener,noreferrer')
+    void onOpened(invitation.id, mode, template?.name ?? '').then(() => setStatus('Aberto no WhatsApp e marcado como enviado.'))
+  }
 
   return (
     <WaContext.Provider value={{ open }}>
@@ -91,8 +101,17 @@ export function WhatsAppProvider({ templates, eventValues, onOpened, onMarkSent,
                   <div>{invitation.label}</div>
                 </div>
                 <div>
-                  <div className="a-label">Telefone</div>
-                  <div>{invitation.phone ? formatPhone(invitation.phone) : <span className="a-muted">Sem telefone cadastrado</span>}</div>
+                  <div className="a-label">{varios ? 'Telefones' : 'Telefone'}</div>
+                  {recipients.length ? (
+                    recipients.map((r) => (
+                      <div key={r.phone}>
+                        {varios ? `${r.name} · ` : ''}
+                        {formatPhone(r.phone)}
+                      </div>
+                    ))
+                  ) : (
+                    <span className="a-muted">Sem telefone cadastrado</span>
+                  )}
                 </div>
               </div>
               <label className="a-field">
@@ -125,6 +144,20 @@ export function WhatsAppProvider({ templates, eventValues, onOpened, onMarkSent,
                 </summary>
                 <textarea className="a-textarea" rows={8} value={message} onChange={(e) => setEdited(e.target.value)} style={{ marginTop: 6 }} />
               </details>
+              {varios ? (
+                <div>
+                  <div className="a-label" style={{ marginBottom: 4 }}>
+                    Enviar para cada um (o mesmo link do convite)
+                  </div>
+                  <div className="a-actions">
+                    {recipients.map((r) => (
+                      <button key={r.phone} type="button" className="a-btn a-btn--wa" onClick={() => abrir(whatsappUrl(r.phone, message))}>
+                        WhatsApp · {r.name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
               {status ? <p className="a-alert a-alert--ok">{status}</p> : null}
             </div>
             <div className="a-dialog__foot">
@@ -142,19 +175,11 @@ export function WhatsAppProvider({ templates, eventValues, onOpened, onMarkSent,
                   Marcar como enviado
                 </button>
               ) : null}
-              <button
-                type="button"
-                className="a-btn a-btn--wa"
-                disabled={!url}
-                onClick={() => {
-                  if (!url) return
-                  // Abre primeiro (dentro do gesto do usuário), registra depois.
-                  window.open(url, '_blank', 'noopener,noreferrer')
-                  void onOpened(invitation.id, mode, template?.name ?? '').then(() => setStatus('Aberto no WhatsApp e marcado como enviado.'))
-                }}
-              >
-                Abrir no WhatsApp
-              </button>
+              {!varios ? (
+                <button type="button" className="a-btn a-btn--wa" disabled={!url} onClick={() => abrir(url)}>
+                  Abrir no WhatsApp
+                </button>
+              ) : null}
             </div>
           </>
         ) : null}

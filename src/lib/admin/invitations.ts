@@ -6,6 +6,7 @@ import { invitationFilterSql } from './invitation-filters'
 import { getSettings } from '@/lib/settings'
 import { eventTemplateValues } from '@/lib/templates'
 import { getFirstMoment } from '@/lib/content'
+import { normalizePhone } from '@/lib/format'
 import type { WaInvitation, WaTemplate } from '@/components/admin/WhatsAppDialog'
 
 export async function loadInvitationRows(opts: { filter?: string; q?: string; archived?: boolean } = {}) {
@@ -68,12 +69,32 @@ export async function loadInvitationRows(opts: { filter?: string; q?: string; ar
 
 export type InvitationRow = Awaited<ReturnType<typeof loadInvitationRows>>[number]
 
+/**
+ * Para quem mandar o convite: cada pessoa com telefone (numa família, todos recebem o mesmo link) e
+ * o telefone do convite, se for de outra pessoa. Sem repetir número.
+ */
+function waRecipients(r: InvitationRow): WaInvitation['recipients'] {
+  const out: WaInvitation['recipients'] = []
+  const seen = new Set<string>()
+  const add = (name: string, phone: string | null) => {
+    const digits = normalizePhone(phone)
+    if (!digits || seen.has(digits)) return
+    seen.add(digits)
+    out.push({ name, phone: digits })
+  }
+  for (const g of r.guests) if (!g.isCompanion) add(g.firstName, g.phone)
+  add(r.greeting, r.inv.phone)
+  return out
+}
+
 export function toWaInvitation(r: InvitationRow): WaInvitation {
+  const recipients = waRecipients(r)
   return {
     id: r.inv.id,
     label: r.inv.label,
     greeting: r.greeting,
-    phone: r.inv.phone,
+    phone: r.inv.phone ?? recipients[0]?.phone ?? null,
+    recipients,
     link: r.link,
     kind: r.inv.kind,
     isCloseFamily: r.inv.isCloseFamily,

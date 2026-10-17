@@ -2,8 +2,9 @@ import { describe, expect, it } from 'vitest'
 import { renderTemplate, unknownVariables } from '@/lib/templates'
 import { defaultTemplateFor, whatsappUrl } from '@/lib/whatsapp'
 import { availabilityOf, resolveGiftAmount } from '@/lib/gifts'
-import { buildImport } from '@/lib/admin/import'
-import { parseCsv, toCsv } from '@/lib/spreadsheet'
+import { strToU8, zipSync } from 'fflate'
+import { buildImport, importSignature } from '@/lib/admin/import'
+import { parseCsv, parseXlsx, toCsv } from '@/lib/spreadsheet'
 import { albumUploadState } from '@/lib/album-state'
 import { coupleParts, monogramFor } from '@/lib/event'
 import { parseSetting } from '@/lib/settings-schema'
@@ -62,6 +63,56 @@ describe('importação de convidados', () => {
     expect(invitations[0]).toMatchObject({ label: 'Família Silva', kind: 'couple', phone: '5598999990001' })
     expect(invitations[0].guests.map((g) => g.firstName)).toEqual(['João', 'Maria'])
     expect(invitations[1]).toMatchObject({ label: 'Beatriz Almeida', kind: 'individual', allowCompanions: true, maxCompanions: 1 })
+  })
+
+  it('“Família N” só junta as pessoas: o convite leva os nomes; homônimos individuais não se misturam', () => {
+    const csv = [
+      'Convite;Tipo;Grupo;Nome;Telefone',
+      'Família 1;Família;Família 1;Ana;+55 98 8000-0001',
+      'Família 1;Família;Família 1;Bento;+55 98 8000-0002',
+      'Manu;Individual;;Manu;',
+      'Família 18;Família;Família 18;Caio;',
+      'Família 18;Família;Família 18;Duda;',
+      'Família 18;Família;Família 18;Elis;+55 98 8000-0003',
+      'Manu;Individual;;Manu;+55 86 9000-0004',
+      'Família Souza;;;Fábio;',
+    ].join('\n')
+    const { invitations, errors } = buildImport(parseCsv(csv))
+    expect(invitations.map((i) => i.label)).toEqual(['Ana e Bento', 'Manu', 'Caio, Duda e Elis', 'Manu', 'Família Souza'])
+    expect(invitations.every((i) => i.groupName === null)).toBe(true)
+    expect(JSON.stringify(invitations)).not.toMatch(/Família \d/)
+    // um convite (um link) por família, cada pessoa com o seu telefone
+    expect(invitations[0].guests.map((g) => g.phone)).toEqual(['559880000001', '559880000002'])
+    expect(invitations[0]).toMatchObject({ kind: 'family', phone: '559880000001' })
+    expect(invitations[2]).toMatchObject({ kind: 'family', phone: '559880000003' })
+    // as duas "Manu" são pessoas diferentes
+    expect(invitations[1].guests).toHaveLength(1)
+    expect(invitations[3].guests[0].phone).toBe('558690000004')
+    expect(importSignature(invitations[1])).not.toBe(importSignature(invitations[3]))
+    expect(errors.join(' ')).toMatch(/“Manu” aparece em 2 convites/)
+  })
+
+  it('lê .xlsx gerado por outros programas (caminhos absolutos e prefixo x:)', async () => {
+    const ns = 'http://schemas.openxmlformats.org/'
+    const rel = (id: string, type: string, target: string) => `<Relationship Type="${ns}officeDocument/2006/relationships/${type}" Target="${target}" Id="${id}" />`
+    const files = {
+      '[Content_Types].xml': strToU8('<?xml version="1.0"?><Types/>'),
+      '_rels/.rels': strToU8(`<Relationships>${rel('R1', 'officeDocument', '/xl/workbook.xml')}</Relationships>`),
+      'xl/_rels/workbook.xml.rels': strToU8(`<Relationships>${rel('R2', 'sharedStrings', '/xl/sharedStrings.xml')}${rel('R3', 'worksheet', '/xl/worksheets/sheet1.xml')}</Relationships>`),
+      'xl/workbook.xml': strToU8(`<x:workbook xmlns:x="${ns}spreadsheetml/2006/main"><x:sheets><x:sheet name="Convidados" sheetId="1" r:id="R3" xmlns:r="r" /></x:sheets></x:workbook>`),
+      'xl/sharedStrings.xml': strToU8('<x:sst><x:si><x:t>Convite</x:t></x:si><x:si><x:t>Nome</x:t></x:si><x:si><x:r><x:t>Fam</x:t></x:r><x:r><x:t>ília 1</x:t></x:r></x:si><x:si><x:t>João &amp; Cia</x:t></x:si></x:sst>'),
+      'xl/worksheets/sheet1.xml': strToU8(
+        '<x:worksheet><x:sheetData><x:row r="1"><x:c r="A1" t="s"><x:v>0</x:v></x:c><x:c r="B1" t="s"><x:v>1</x:v></x:c><x:c r="C1" t="inlineStr"><x:is><x:t>Telefone</x:t></x:is></x:c></x:row>' +
+          '<x:row r="2"><x:c r="A2" t="s"><x:v>2</x:v></x:c><x:c r="B2" t="s"><x:v>3</x:v></x:c><x:c r="C2"><x:v>98980000001</x:v></x:c></x:row>' +
+          '<x:row r="3"><x:c r="B3" t="inlineStr"><x:is><x:t>Bia</x:t></x:is></x:c></x:row></x:sheetData></x:worksheet>',
+      ),
+    }
+    const rows = await parseXlsx(Buffer.from(zipSync(files)))
+    expect(rows).toEqual([
+      ['Convite', 'Nome', 'Telefone'],
+      ['Família 1', 'João & Cia', '98980000001'],
+      ['', 'Bia'],
+    ])
   })
 
   it('CSV lida com aspas, vírgulas e neutraliza fórmulas', () => {

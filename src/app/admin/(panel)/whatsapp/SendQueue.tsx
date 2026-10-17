@@ -30,7 +30,14 @@ export function SendQueue({ items, templates, eventValues, mode, onOpened }: Pro
   )
   if (!items.length) return <p className="a-muted">Nada na fila. 🎉</p>
   if (!current) return <p className="a-alert a-alert--ok">Fila concluída: {done.size} aberto(s) no WhatsApp.</p>
-  const url = whatsappUrl(current.phone, message)
+  const destinos = current.recipients.length ? current.recipients : current.phone ? [{ name: current.greeting, phone: current.phone }] : []
+  const abrir = (phone: string) => {
+    const url = whatsappUrl(phone, message)
+    if (!url) return
+    window.open(url, '_blank', 'noopener,noreferrer')
+    setDone((s) => new Set(s).add(current.id))
+    void onOpened(current.id, mode, template?.name ?? '')
+  }
 
   return (
     <div className="a-card" style={{ background: '#fff' }}>
@@ -39,24 +46,24 @@ export function SendQueue({ items, templates, eventValues, mode, onOpened }: Pro
           {index + 1} de {items.length} · {current.label}
         </strong>
         <span className="a-muted">
-          {current.phone ? formatPhone(current.phone) : 'Sem telefone'} · modelo: {template?.name ?? '—'}
+          {destinos.length ? destinos.map((d) => (destinos.length > 1 ? `${d.name} ${formatPhone(d.phone)}` : formatPhone(d.phone))).join(' · ') : 'Sem telefone'} · modelo:{' '}
+          {template?.name ?? '—'}
         </span>
       </div>
       <div className="a-wa-preview">{message}</div>
       <div className="a-actions" style={{ marginTop: 12 }}>
-        <button
-          type="button"
-          className="a-btn a-btn--wa"
-          disabled={!url}
-          onClick={() => {
-            if (!url) return
-            window.open(url, '_blank', 'noopener,noreferrer')
-            setDone((s) => new Set(s).add(current.id))
-            void onOpened(current.id, mode, template?.name ?? '')
-          }}
-        >
-          {done.has(current.id) ? 'Abrir de novo' : 'Abrir no WhatsApp'}
-        </button>
+        {destinos.length > 1 ? (
+          // Família: o mesmo link para cada pessoa.
+          destinos.map((d) => (
+            <button key={d.phone} type="button" className="a-btn a-btn--wa" onClick={() => abrir(d.phone)}>
+              WhatsApp · {d.name}
+            </button>
+          ))
+        ) : (
+          <button type="button" className="a-btn a-btn--wa" disabled={!destinos.length} onClick={() => destinos[0] && abrir(destinos[0].phone)}>
+            {done.has(current.id) ? 'Abrir de novo' : 'Abrir no WhatsApp'}
+          </button>
+        )}
         <CopyButton text={message} label="Copiar mensagem" className="a-btn" />
         <button type="button" className="a-btn" onClick={() => setIndex((i) => Math.max(0, i - 1))} disabled={index === 0}>
           ‹ Anterior

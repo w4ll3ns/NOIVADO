@@ -21,8 +21,11 @@ export const metadata: Metadata = {
     siteName: 'Maby & Chris',
     title: 'Maby & Chris · Noivado',
     description: '31 de outubro de 2026 · Casa de Zaquia · Centro Histórico de São Luís',
-    images: [{ url: '/brand/save-the-date.jpg', width: 882, height: 1280, alt: 'Save the Date — Noivado Maby e Chris' }],
+    // Prévia dos links (WhatsApp etc.): horizontal 1200×630, que o WhatsApp mostra grande. Nome novo de
+    // arquivo para o WhatsApp não reaproveitar a prévia antiga do cache dele.
+    images: [{ url: '/brand/noivado-convite.jpg', width: 1200, height: 630, alt: 'Noivado de Maby e Chris — 31 de outubro de 2026, Casa de Zaquia' }],
   },
+  twitter: { card: 'summary_large_image', images: ['/brand/noivado-convite.jpg'] },
   robots: { index: false, follow: false },
   formatDetection: { telephone: false, email: false, address: false },
 }

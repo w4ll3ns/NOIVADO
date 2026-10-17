@@ -1,12 +1,12 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import { sql } from 'drizzle-orm'
+import { and, inArray, isNull, sql } from 'drizzle-orm'
 import { z } from 'zod'
 import { db, schema } from '@/lib/db'
 import { requireAdmin } from '@/lib/auth/session'
 import { audit } from '@/lib/audit'
-import { buildImport, type ImportInvitation } from '@/lib/admin/import'
+import { buildImport, importSignature, type ImportInvitation } from '@/lib/admin/import'
 import { parseCsv, parseXlsx } from '@/lib/spreadsheet'
 import { createInvitationToken, logInvitationEvent } from '@/lib/invitations'
 import { INVITATION_KINDS } from '@/lib/db/schema'
@@ -14,10 +14,47 @@ import { cleanLine } from '@/lib/sanitize'
 
 export type ImportState = {
   preview?: ImportInvitation[]
+  /** Índices (em preview) dos convites que já existem e não serão importados de novo. */
+  existing?: number[]
   payload?: string
   errors?: string[]
   error?: string
   done?: { created: number; skipped: string[] }
+}
+
+/**
+ * Quantos convites ativos já existem com cada assinatura (nome, pessoas e telefones): importar a mesma
+ * planilha de novo não duplica, mas duas pessoas diferentes com o mesmo nome entram as duas.
+ */
+async function existingSignatures(labels: string[]) {
+  const counts = new Map<string, number>()
+  const lower = [...new Set(labels.map((l) => l.toLowerCase()))]
+  if (!lower.length) return counts
+  const invs = await db
+    .select({ id: schema.invitations.id, label: schema.invitations.label, phone: schema.invitations.phone })
+    .from(schema.invitations)
+    .where(and(isNull(schema.invitations.archivedAt), inArray(sql`lower(${schema.invitations.label})`, lower)))
+  if (!invs.length) return counts
+  const guests = await db
+    .select({ invitationId: schema.guests.invitationId, firstName: schema.guests.firstName, phone: schema.guests.phone })
+    .from(schema.guests)
+    .where(and(inArray(schema.guests.invitationId, invs.map((i) => i.id)), isNull(schema.guests.removedAt), sql`not ${schema.guests.isCompanion}`))
+  for (const inv of invs) {
+    const sig = importSignature({ ...inv, guests: guests.filter((g) => g.invitationId === inv.id) })
+    counts.set(sig, (counts.get(sig) ?? 0) + 1)
+  }
+  return counts
+}
+
+/** Marca, na ordem da lista, os convites que já existem (consome cada existente uma vez só). */
+function markExisting(list: ImportInvitation[], counts: Map<string, number>) {
+  const left = new Map(counts)
+  return list.map((inv) => {
+    const sig = importSignature(inv)
+    const n = left.get(sig) ?? 0
+    if (n > 0) left.set(sig, n - 1)
+    return n > 0
+  })
 }
 
 export async function previewImportAction(_prev: ImportState, form: FormData): Promise<ImportState> {
@@ -34,7 +71,9 @@ export async function previewImportAction(_prev: ImportState, form: FormData): P
   }
   const { invitations, errors } = buildImport(rows)
   if (!invitations.length) return { error: errors[0] ?? 'Nenhum convidado encontrado.', errors }
-  return { preview: invitations, payload: JSON.stringify(invitations), errors }
+  const exists = markExisting(invitations, await existingSignatures(invitations.map((i) => i.label)))
+  const existing = exists.flatMap((e, i) => (e ? [i] : []))
+  return { preview: invitations, existing, payload: JSON.stringify(invitations), errors }
 }
 
 const importSchema = z.array(
@@ -65,9 +104,9 @@ export async function confirmImportAction(_prev: ImportState, form: FormData): P
   }
   const skipped: string[] = []
   let created = 0
-  for (const inv of list) {
-    const [exists] = await db.select({ id: schema.invitations.id }).from(schema.invitations).where(sql`lower(${schema.invitations.label}) = lower(${inv.label}) and ${schema.invitations.archivedAt} is null`)
-    if (exists) {
+  const exists = markExisting(list, await existingSignatures(list.map((i) => i.label)))
+  for (const [index, inv] of list.entries()) {
+    if (exists[index]) {
       skipped.push(inv.label)
       continue
     }
