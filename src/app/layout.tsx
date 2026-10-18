@@ -23,9 +23,9 @@ export const metadata: Metadata = {
     description: '31 de outubro de 2026 · Casa de Zaquia · Centro Histórico de São Luís',
     // Prévia dos links (WhatsApp etc.): horizontal 1200×630, que o WhatsApp mostra grande. Nome novo de
     // arquivo para o WhatsApp não reaproveitar a prévia antiga do cache dele.
-    images: [{ url: '/brand/noivado-convite.jpg', width: 1200, height: 630, alt: 'Noivado de Maby e Chris — 31 de outubro de 2026, Casa de Zaquia' }],
+    images: [{ url: '/brand/noivado-convite.jpg?v=2', width: 1200, height: 630, alt: 'Noivado de Maby e Chris — 31 de outubro de 2026, Casa de Zaquia' }],
   },
-  twitter: { card: 'summary_large_image', images: ['/brand/noivado-convite.jpg'] },
+  twitter: { card: 'summary_large_image', images: ['/brand/noivado-convite.jpg?v=2'] },
   robots: { index: false, follow: false },
   formatDetection: { telephone: false, email: false, address: false },
 }
