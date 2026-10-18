@@ -262,7 +262,7 @@ export function CasaraoIntro(props: Props) {
       </div>
 
       <footer className="intro__bottom">
-        <p className="intro__phrase">“{props.phrase}”</p>
+        <p className="intro__phrase">{props.phrase}</p>
         <button ref={enterRef} type="button" className="btn btn--primary intro__enter" onClick={enter}>
           {props.buttonLabel}
         </button>
