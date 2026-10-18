@@ -2218,17 +2218,6 @@ body:has(.musica) .site-footer {
 /* =========================================================
    Presentes: escolher vários e finalizar de uma vez
    ========================================================= */
-.gift-como {
-  margin: 14px auto 0;
-  max-width: 34rem;
-  font-style: italic;
-  color: var(--ink-soft);
-}
-.gift-como strong {
-  font-style: normal;
-  font-weight: 500;
-  color: var(--sepia);
-}
 /* Botão "Escolher" do cartão; escolhido fica preenchido com um ✓. */
 .gift__escolher {
   display: inline-flex;

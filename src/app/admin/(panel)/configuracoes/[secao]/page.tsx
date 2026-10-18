@@ -130,6 +130,7 @@ const SECTIONS: Section[] = [
     fields: [
       { name: 'enabled', label: 'Lista de presentes ativa', type: 'checkbox', span: true },
       { name: 'intro', label: 'Introdução da lista', type: 'textarea', rows: 4 },
+      { name: 'showCategories', label: 'Mostrar os títulos das categorias na lista (desligado: todos os presentes juntos)', type: 'checkbox', span: true },
       {
         name: 'maxInstallments',
         label: 'Máximo de parcelas no cartão de crédito',

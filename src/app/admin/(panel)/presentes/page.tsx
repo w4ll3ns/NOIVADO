@@ -7,7 +7,8 @@ import { requireAdmin, hasRole } from '@/lib/auth/session'
 import { db, schema } from '@/lib/db'
 import { availabilityOf, giftCounts } from '@/lib/gifts'
 import { formatBRL, formatBRLShort } from '@/lib/format'
-import { saveCategoryAction, toggleGiftAction } from './actions'
+import { getSettings } from '@/lib/settings'
+import { mostrarCategoriasAction, saveCategoryAction, toggleGiftAction } from './actions'
 
 export const metadata: Metadata = { title: 'Presentes' }
 
@@ -16,10 +17,12 @@ export default async function GiftsAdminPage(props: PageProps<'/admin/presentes'
   const sp = await props.searchParams
   const showArchived = sp.arquivados === '1'
   const canEdit = hasRole(admin, 'editor')
-  const [categories, gifts] = await Promise.all([
+  const [categories, gifts, settings] = await Promise.all([
     db.select().from(schema.giftCategories).orderBy(asc(schema.giftCategories.sortOrder)),
     db.select().from(schema.gifts).where(showArchived ? undefined : isNull(schema.gifts.archivedAt)).orderBy(asc(schema.gifts.sortOrder), asc(schema.gifts.name)),
+    getSettings(),
   ])
+  const mostrarCategorias = settings.gifts.showCategories
   const counts = await giftCounts()
   const catName = new Map(categories.map((c) => [c.id, c.name]))
 
@@ -130,6 +133,22 @@ export default async function GiftsAdminPage(props: PageProps<'/admin/presentes'
 
       <section className="a-card" style={{ marginTop: 18 }}>
         <h2 className="a-card__title">Categorias</h2>
+        <div className="a-cat-site">
+          <p>
+            {mostrarCategorias
+              ? 'No site, os presentes aparecem separados por estas categorias, com o nome de cada uma.'
+              : 'No site, os títulos das categorias estão ocultos: os presentes aparecem todos juntos.'}
+          </p>
+          {canEdit ? (
+            <form action={mostrarCategoriasAction}>
+              <input type="hidden" name="mostrar" value={mostrarCategorias ? '0' : '1'} />
+              <button className="a-btn a-btn--sm">{mostrarCategorias ? 'Ocultar categorias no site' : 'Mostrar categorias no site'}</button>
+            </form>
+          ) : null}
+        </div>
+        <p className="a-help" style={{ marginBottom: 6 }}>
+          Categoria desmarcada como “Ativa”: os presentes dela aparecem em “Outras ideias”.
+        </p>
         <div style={{ display: 'grid', gap: 10 }}>
           {[...categories, null].map((c) => (
             <form key={c?.id ?? 'new'} action={saveCategoryAction} className="a-form-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', alignItems: 'end', borderTop: '1px solid var(--a-line)', paddingTop: 10 }}>

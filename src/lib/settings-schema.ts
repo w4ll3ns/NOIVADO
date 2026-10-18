@@ -129,6 +129,8 @@ export const giftsSettingsSchema = z.object({
     'A sua presença já torna esse momento especial.\n\nMas, se desejar nos presentear, preparamos algumas ideias com muito carinho — e algumas com uma pequena dose de bom humor.',
     2000,
   ),
+  /** Títulos das categorias na lista do site. Desligado: todos os presentes juntos. */
+  showCategories: z.boolean().default(true),
   maxInstallments: z.coerce.number().int().min(1).max(12).default(12),
   statementDescriptor: text('MABYECHRIS', 13),
   thanksTitle: text('Obrigado por fazer parte da nossa história.', 200),

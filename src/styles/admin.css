@@ -520,6 +520,19 @@ a.a-kpi:hover {
   color: var(--rose);
 }
 
+/* Presentes: categorias visíveis ou ocultas no site */
+.a-cat-site {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 14px;
+  margin-bottom: 8px;
+}
+.a-cat-site p {
+  margin: 0;
+}
+
 /* Tabelas */
 .a-table-wrap {
   background: var(--a-surface);

@@ -6,6 +6,7 @@ import { eq } from 'drizzle-orm'
 import { db, schema } from '@/lib/db'
 import { requireAdmin } from '@/lib/auth/session'
 import { audit } from '@/lib/audit'
+import { getSettings, saveSetting } from '@/lib/settings'
 import { parseBRLToCents, slugify } from '@/lib/format'
 import { cleanLine, cleanText } from '@/lib/sanitize'
 import { saveMedia } from '@/lib/media'
@@ -113,6 +114,16 @@ export async function saveCategoryAction(form: FormData) {
   if (/^[0-9a-f-]{36}$/.test(id)) await db.update(schema.giftCategories).set(values).where(eq(schema.giftCategories.id, id))
   else await db.insert(schema.giftCategories).values({ ...values, slug: `${slugify(name)}-${Date.now().toString(36)}` })
   await audit(admin.id, 'gift_category.save', 'gift_category', id || null, { name })
+  revalidatePath('/admin/presentes')
+  revalidatePath('/presentes')
+}
+
+/** Títulos das categorias na lista do site (o mesmo ajuste de Configurações › Presentes). */
+export async function mostrarCategoriasAction(form: FormData) {
+  const admin = await requireAdmin('editor')
+  const gifts = (await getSettings()).gifts
+  await saveSetting('gifts', { ...gifts, showCategories: form.get('mostrar') === '1' }, admin.id)
+  await audit(admin.id, 'settings.gifts', 'site_settings', 'gifts')
   revalidatePath('/admin/presentes')
   revalidatePath('/presentes')
 }

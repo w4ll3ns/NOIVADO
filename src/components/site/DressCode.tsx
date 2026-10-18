@@ -15,7 +15,7 @@ export function DressCode({ dress: d }: { dress: Settings['dressCode'] }) {
           <p className="dress__type">{d.type}</p>
         </>
       ) : null}
-      {d.description ? <p className="dress__desc">“{d.description}”</p> : null}
+      {d.description ? <p className="dress__desc">{d.description}</p> : null}
       {d.referenceMediaIds.length ? (
         <div className="dress__imagens">
           {d.referenceMediaIds.map((id, i) => (
