@@ -69,7 +69,7 @@ export default async function RsvpPage(props: PageProps<'/i/[token]/presenca'>) 
             <p className="result__text">{r.closedText}</p>
             <div className="btn-row" style={{ marginTop: 24 }}>
               <Link href={`/i/${token}`} className="btn btn--primary">
-                Voltar ao meu convite
+                Voltar ao início
               </Link>
             </div>
           </div>

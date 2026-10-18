@@ -43,7 +43,7 @@ export function RsvpForm(props: Props) {
         {props.giftsEnabled && props.texts.giftsInvite ? <p className="result__convite">{props.texts.giftsInvite}</p> : null}
         <div className="btn-row" style={{ marginTop: 28 }}>
           <Link href={`/i/${props.token}`} className="btn btn--primary">
-            Voltar ao meu convite
+            Voltar ao início
           </Link>
           {props.giftsEnabled ? (
             <Link href="/presentes" className="btn">

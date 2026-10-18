@@ -1,7 +1,7 @@
 import 'server-only'
 import { cache } from 'react'
 import { cookies } from 'next/headers'
-import { and, asc, desc, eq, inArray, isNull, sql } from 'drizzle-orm'
+import { and, asc, desc, eq, isNull, sql } from 'drizzle-orm'
 import { db, schema, type Tx } from '@/lib/db'
 import { isValidTokenShape, randomToken } from '@/lib/security/tokens'
 import { joinNames } from '@/lib/format'
@@ -150,49 +150,20 @@ export type CurrentGuest = {
   greeting: string
 }
 
-/** Convite reconhecido pelo cookie (definido quando o link pessoal é aberto). */
-export const getCurrentGuest = cache(async (): Promise<CurrentGuest | null> => {
-  const jar = await cookies()
-  const token = jar.get(GUEST_COOKIE)?.value
-  if (!token) return null
+/** O convidado de um link de convite (/i/<token>). */
+export const getGuestByToken = cache(async (token: string): Promise<CurrentGuest | null> => {
   const found = await findInvitationByToken(token)
   if (!found) return null
   const guests = await listGuests(found.invitation.id)
   return { token, invitation: found.invitation, guests, greeting: greetingFor(found.invitation, guests) }
 })
 
-export async function loadInvitationGifts(invitationId: string) {
-  return db
-    .select({
-      id: schema.giftPayments.id,
-      giftName: schema.giftPayments.giftName,
-      giftId: schema.giftPayments.giftId,
-      icon: schema.gifts.icon,
-      amountCents: schema.giftPayments.amountCents,
-      status: schema.giftPayments.status,
-      message: schema.giftPayments.message,
-      approvedAt: schema.giftPayments.approvedAt,
-      createdAt: schema.giftPayments.createdAt,
-    })
-    .from(schema.giftPayments)
-    .innerJoin(schema.gifts, eq(schema.gifts.id, schema.giftPayments.giftId))
-    .where(
-      and(
-        eq(schema.giftPayments.invitationId, invitationId),
-        inArray(schema.giftPayments.status, ['approved', 'awaiting']),
-      ),
-    )
-    .orderBy(desc(schema.giftPayments.createdAt))
-}
-
-export async function loadInvitationMessages(invitationId: string) {
-  return db
-    .select()
-    .from(schema.messages)
-    .where(and(eq(schema.messages.invitationId, invitationId), isNull(schema.messages.archivedAt)))
-    .orderBy(desc(schema.messages.createdAt))
-    .limit(5)
-}
+/** Convite reconhecido pelo cookie (definido quando o link pessoal é aberto). */
+export const getCurrentGuest = cache(async (): Promise<CurrentGuest | null> => {
+  const jar = await cookies()
+  const token = jar.get(GUEST_COOKIE)?.value
+  return token ? getGuestByToken(token) : null
+})
 
 export async function latestRsvp(invitationId: string) {
   const [row] = await db

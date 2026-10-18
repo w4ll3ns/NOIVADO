@@ -57,8 +57,7 @@ export default async function GiftReturnPage(props: PageProps<'/presentes/retorn
             <h1 className="result__title">Estamos aguardando a confirmação</h1>
             <Divider />
             <p className="result__text">
-              Assim que o Mercado Pago confirmar o pagamento, {order.rows.length === 1 ? 'ele aparece' : 'os presentes aparecem'} aqui e no seu
-              convite.{' '}
+              Assim que o Mercado Pago confirmar o pagamento, {order.rows.length === 1 ? 'ele aparece' : 'os presentes aparecem'} aqui.{' '}
               {order.rows[0].paymentType === 'credit_card'
                 ? 'O pagamento no cartão está em análise pelo Mercado Pago: costuma levar alguns minutos (às vezes até 2 dias úteis).'
                 : 'Pagando o Pix, isso leva só alguns instantes.'}
@@ -93,7 +92,7 @@ export default async function GiftReturnPage(props: PageProps<'/presentes/retorn
         )}
         <div className="btn-row" style={{ marginTop: 18 }}>
           <Link href={back} className="btn">
-            {guest ? 'Voltar ao meu convite' : 'Voltar ao início'}
+            Voltar ao início
           </Link>
           <Link href="/presentes" className="btn btn--link">
             Ver a lista de presentes

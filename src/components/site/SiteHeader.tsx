@@ -1,24 +1,74 @@
 'use client'
 
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { useEffect, useRef, useState, type MouseEvent } from 'react'
 import { createPortal } from 'react-dom'
 import { Crest } from '@/components/ornaments/Ornaments'
+import { ehInicio, tokenDoCaminho } from '@/lib/convite-link'
 
 export type NavLink = { href: string; label: string }
 
+/** Onde a seção fica, descontando o cabeçalho fixo (o mesmo respiro do scroll-padding-top). */
+function topoDe(alvo: HTMLElement) {
+  const respiro = parseFloat(getComputedStyle(document.documentElement).scrollPaddingTop)
+  const margem = Number.isFinite(respiro) ? respiro : (document.querySelector<HTMLElement>('.site-header')?.offsetHeight ?? 0) + 12
+  const maximo = document.documentElement.scrollHeight - window.innerHeight
+  return Math.max(0, Math.min(maximo, alvo.getBoundingClientRect().top + window.scrollY - margem))
+}
+
 /**
- * Já na página da âncora (ex.: "/#localizacao" estando na home): rola suavemente até a seção,
- * mesmo que o endereço já tenha essa âncora. Em outra página, o link navega normalmente.
+ * Rolagem lenta até a seção, para o convidado ver o conteúdo passando: mais longe, um pouco mais de
+ * tempo (até ~3,5s). Qualquer toque, roda ou tecla interrompe. Com "reduzir movimento", vai direto.
  */
-function rolarAte(e: MouseEvent<HTMLAnchorElement>, href: string) {
+function rolarDevagar(alvo: HTMLElement, doTopo = false) {
+  const html = document.documentElement
+  const antes = html.style.scrollBehavior
+  // O CSS rola "smooth": aqui cada quadro tem que ir direto ao ponto.
+  html.style.scrollBehavior = 'auto'
+  if (doTopo) window.scrollTo(0, 0)
+  const inicio = window.scrollY
+  const distancia = Math.abs(topoDe(alvo) - inicio)
+  if (distancia < 2 || window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    window.scrollTo(0, topoDe(alvo))
+    html.style.scrollBehavior = antes
+    return
+  }
+  const duracao = Math.min(3500, 900 + distancia * 0.8)
+  const eventos = ['wheel', 'touchstart', 'pointerdown', 'keydown'] as const
+  let ativo = true
+  const parar = () => {
+    if (!ativo) return
+    ativo = false
+    html.style.scrollBehavior = antes
+    for (const ev of eventos) window.removeEventListener(ev, parar)
+  }
+  for (const ev of eventos) window.addEventListener(ev, parar, { passive: true })
+  const t0 = performance.now()
+  const quadro = (agora: number) => {
+    if (!ativo) return
+    const t = Math.min(1, (agora - t0) / duracao)
+    // Destino recalculado a cada quadro: fotos que carregam no caminho não fazem errar a seção.
+    window.scrollTo(0, inicio + (topoDe(alvo) - inicio) * (0.5 - Math.cos(Math.PI * t) / 2))
+    if (t < 1) requestAnimationFrame(quadro)
+    else parar()
+  }
+  requestAnimationFrame(quadro)
+}
+
+/**
+ * Âncora da home ("/#localizacao"). Na home (ou no link do convite, que é a home) rola até a seção sem
+ * sair da página, mesmo que o endereço já tenha essa âncora. Em outra página, o link navega normalmente.
+ */
+function rolarAte(e: MouseEvent<HTMLAnchorElement>, href: string, devagar = false) {
+  if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return
   const [path, id] = href.split('#')
-  if (!id || window.location.pathname !== (path || '/')) return
+  if (!id || path !== '/' || !ehInicio(window.location.pathname)) return
   const alvo = document.getElementById(id)
   if (!alvo) return
   e.preventDefault()
-  alvo.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  // Depois do clique (o menu pode estar fechando e devolvendo a rolagem da página).
+  requestAnimationFrame(() => (devagar ? rolarDevagar(alvo) : alvo.scrollIntoView({ behavior: 'smooth', block: 'start' })))
   if (window.location.hash !== `#${id}`) history.replaceState(history.state, '', `#${id}`)
 }
 
@@ -30,12 +80,13 @@ type Props = {
   rsvpHref: string
   ctaLabel: string
   ctaShort: string
-  portalHref?: string | null
 }
 
-export function SiteHeader({ links, ctaHref, rsvpHref, ctaLabel, ctaShort, portalHref }: Props) {
+export function SiteHeader({ links, ctaHref, rsvpHref, ctaLabel, ctaShort }: Props) {
   const [open, setOpen] = useState(false)
   const pathname = usePathname()
+  const router = useRouter()
+  const descerAte = useRef<string | null>(null)
   const toggleRef = useRef<HTMLButtonElement>(null)
   const closeRef = useRef<HTMLButtonElement>(null)
   const sheetRef = useRef<HTMLDivElement>(null)
@@ -75,7 +126,30 @@ export function SiteHeader({ links, ctaHref, rsvpHref, ctaLabel, ctaShort, porta
     }
   }, [open])
 
-  const allLinks = portalHref ? [{ href: portalHref, label: 'Meu convite' }, ...links] : links
+  // Botão de presença vindo de outra página: abre a home e desce devagar até a seção.
+  useEffect(() => {
+    const id = descerAte.current
+    if (!id || !ehInicio(pathname)) return
+    descerAte.current = null
+    let tentativas = 0
+    let raf = requestAnimationFrame(function procurar() {
+      const alvo = document.getElementById(id)
+      if (alvo) rolarDevagar(alvo, true)
+      else if (++tentativas < 120) raf = requestAnimationFrame(procurar)
+    })
+    return () => cancelAnimationFrame(raf)
+  }, [pathname])
+
+  const irParaPresenca = (e: MouseEvent<HTMLAnchorElement>) => {
+    if (ehInicio(pathname)) return rolarAte(e, ctaHref, true)
+    const [path, id] = ctaHref.split('#')
+    if (!id || path !== '/' || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return
+    e.preventDefault()
+    descerAte.current = id
+    // No link do convite, a home é o próprio convite.
+    const token = tokenDoCaminho(pathname)
+    router.push(token ? `/i/${token}` : '/', { scroll: false })
+  }
 
   return (
     <header className="site-header">
@@ -92,8 +166,8 @@ export function SiteHeader({ links, ctaHref, rsvpHref, ctaLabel, ctaShort, porta
           Menu
         </button>
         <nav className="site-nav" aria-label="Principal">
-          {allLinks.map((l) => (
-            <Link key={l.href} href={l.href} aria-current={pathname === l.href ? 'page' : undefined}>
+          {links.map((l) => (
+            <Link key={l.href} href={l.href} aria-current={pathname === l.href ? 'page' : undefined} onClick={(e) => rolarAte(e, l.href)}>
               {l.label}
             </Link>
           ))}
@@ -102,7 +176,7 @@ export function SiteHeader({ links, ctaHref, rsvpHref, ctaLabel, ctaShort, porta
           href={ctaHref}
           className="btn btn--primary btn--small header-cta"
           aria-label={ctaLabel}
-          onClick={(e) => rolarAte(e, ctaHref)}
+          onClick={irParaPresenca}
         >
           <span className="header-cta__long">{ctaLabel}</span>
           <span className="header-cta__short" aria-hidden="true">
@@ -126,9 +200,15 @@ export function SiteHeader({ links, ctaHref, rsvpHref, ctaLabel, ctaShort, porta
               <nav aria-label="Menu">
                 <Crest />
                 <ul>
-                  {allLinks.map((l) => (
+                  {links.map((l) => (
                     <li key={l.href}>
-                      <Link href={l.href} onClick={() => setOpen(false)}>
+                      <Link
+                        href={l.href}
+                        onClick={(e) => {
+                          rolarAte(e, l.href)
+                          setOpen(false)
+                        }}
+                      >
                         {l.label}
                       </Link>
                     </li>

@@ -1,13 +1,20 @@
+import { headers } from 'next/headers'
 import { SiteHeader, type NavLink } from '@/components/site/SiteHeader'
 import { SiteFooter } from '@/components/site/SiteFooter'
 import { MusicPlayer } from '@/components/music/MusicPlayer'
 import { getSettings } from '@/lib/settings'
-import { getCurrentGuest } from '@/lib/invitations'
+import { getCurrentGuest, getGuestByToken } from '@/lib/invitations'
+import { CONVITE_HEADER } from '@/lib/convite-link'
 import { formatDateDots } from '@/lib/format'
 import { mediaUrl } from '@/lib/media'
 
 export default async function SiteLayout({ children }: { children: React.ReactNode }) {
-  const [settings, guest] = await Promise.all([getSettings(), getCurrentGuest()])
+  // No link do convite vale o convidado do endereço; no resto do site, o do cookie.
+  const doLink = (await headers()).get(CONVITE_HEADER)
+  const [settings, guest] = await Promise.all([
+    getSettings(),
+    doLink ? getGuestByToken(doLink).then((g) => g ?? getCurrentGuest()) : getCurrentGuest(),
+  ])
   const links: NavLink[] = [
     { href: '/#inicio', label: 'Início' },
     { href: '/#noivado', label: 'O Noivado' },
@@ -28,7 +35,6 @@ export default async function SiteLayout({ children }: { children: React.ReactNo
         rsvpHref={guest ? `/i/${guest.token}/presenca` : '/confirmar'}
         ctaLabel={guest && guest.invitation.rsvpStatus !== 'pending' ? 'Minha presença' : 'Confirmar presença'}
         ctaShort={guest && guest.invitation.rsvpStatus !== 'pending' ? 'Presença' : 'Confirmar'}
-        portalHref={guest ? `/i/${guest.token}` : null}
       />
       <main id="conteudo" tabIndex={-1} className="page-main">
         {children}

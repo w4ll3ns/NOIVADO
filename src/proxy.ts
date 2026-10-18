@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server'
 
 import { adminCookieName } from '@/lib/auth/constants'
+import { CONVITE_HEADER, tokenDoCaminho } from '@/lib/convite-link'
 
 const MP_FORM_TARGETS = 'https://*.mercadopago.com.br https://*.mercadopago.com https://*.mercadolivre.com'
 
@@ -45,6 +46,10 @@ export function proxy(request: NextRequest) {
   const requestHeaders = new Headers(request.headers)
   requestHeaders.set('x-nonce', nonce)
   requestHeaders.set('Content-Security-Policy', csp)
+  // No link do convite, o layout usa o convidado do endereço (mesmo antes do cookie existir).
+  requestHeaders.delete(CONVITE_HEADER)
+  const convite = tokenDoCaminho(pathname)
+  if (convite) requestHeaders.set(CONVITE_HEADER, convite)
   const response = NextResponse.next({ request: { headers: requestHeaders } })
   response.headers.set('Content-Security-Policy', csp)
   return response
