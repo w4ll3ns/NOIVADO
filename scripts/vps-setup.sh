@@ -195,6 +195,9 @@ if [ "$HEALTHY" = 0 ]; then
   $COMPOSE logs --tail 40 setup app >&2 || true
   exit 1
 fi
+# Aquece as páginas (a primeira abertura de cada uma carrega o código dela): a prévia do WhatsApp
+# de um link enviado logo depois da atualização não pega o site ainda lento.
+$DOCKER exec "$APP_ID" node -e "Promise.all(['/', '/i/aquecimento0', '/presentes'].map((p) => fetch('http://127.0.0.1:3000' + p, { headers: { 'user-agent': 'WhatsApp/2 aquecimento' } }).then((r) => r.text()))).catch(() => {})" >/dev/null 2>&1 || true
 
 echo
 echo "════════════════════════════════════════════════════════════"
